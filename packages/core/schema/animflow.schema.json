@@ -1,0 +1,810 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://animflow.dev/schema/v1.0/animflow.json",
+  "title": "AnimFlow DSL Schema",
+  "description": "Schema for AnimFlow declarative diagram definition language",
+  "type": "object",
+  "required": ["version", "nodes"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "DSL version (e.g., '1.0')"
+    },
+    "metadata": {
+      "$ref": "#/definitions/metadata"
+    },
+    "canvas": {
+      "$ref": "#/definitions/canvas"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/node"
+      },
+      "minItems": 1,
+      "description": "List of diagram nodes"
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/edge"
+      },
+      "description": "List of connections between nodes"
+    },
+    "variables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/variable"
+      },
+      "description": "Global variable definitions"
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/scenario"
+      },
+      "description": "Animation scenarios"
+    },
+    "controls": {
+      "$ref": "#/definitions/controls"
+    },
+    "stats": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/stat"
+      },
+      "description": "Statistics panel definitions"
+    },
+    "logging": {
+      "$ref": "#/definitions/loggingConfig"
+    },
+    "layout": {
+      "$ref": "#/definitions/layout"
+    },
+    "presets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/preset"
+      },
+      "description": "Scenario variable presets for different simulation modes"
+    },
+    "comparison": {
+      "$ref": "#/definitions/comparison"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "description": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "canvas": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 1,
+          "default": 1200
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1,
+          "default": 800
+        },
+        "background": {
+          "$ref": "#/definitions/hexColor"
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/section"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "section": {
+      "type": "object",
+      "required": ["id", "bounds"],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/identifier"
+        },
+        "label": { "type": "string" },
+        "bounds": {
+          "type": "object",
+          "required": ["y", "height"],
+          "properties": {
+            "y": { "type": "number", "minimum": 0 },
+            "height": { "type": "number", "minimum": 1 }
+          },
+          "additionalProperties": false
+        },
+        "style": {
+          "type": "object",
+          "properties": {
+            "background": { "$ref": "#/definitions/hexColor" },
+            "labelColor": { "$ref": "#/definitions/hexColor" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "label", "position"],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/identifier"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["box", "circle", "database", "icon", "group"],
+          "default": "box"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "position": {
+          "$ref": "#/definitions/point"
+        },
+        "section": {
+          "type": "string"
+        },
+        "style": {
+          "$ref": "#/definitions/nodeStyle"
+        }
+      },
+      "additionalProperties": false
+    },
+    "nodeStyle": {
+      "type": "object",
+      "properties": {
+        "color": { "$ref": "#/definitions/hexColor" },
+        "shape": {
+          "type": "string",
+          "enum": ["rect", "rounded-rect", "circle", "diamond"],
+          "default": "rounded-rect"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 1,
+          "default": 120
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1,
+          "default": 60
+        },
+        "icon": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "required": ["id", "from", "to"],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/identifier"
+        },
+        "from": {
+          "type": "string",
+          "description": "Source node ID"
+        },
+        "to": {
+          "type": "string",
+          "description": "Target node ID"
+        },
+        "label": { "type": "string" },
+        "style": {
+          "$ref": "#/definitions/edgeStyle"
+        }
+      },
+      "additionalProperties": false
+    },
+    "edgeStyle": {
+      "type": "object",
+      "properties": {
+        "color": { "$ref": "#/definitions/hexColor" },
+        "lineType": {
+          "type": "string",
+          "enum": ["solid", "dashed", "dotted"],
+          "default": "solid"
+        },
+        "lineWidth": {
+          "type": "number",
+          "minimum": 1,
+          "default": 3
+        },
+        "animated": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "variable": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["boolean", "number", "string"]
+        },
+        "default": {}
+      },
+      "additionalProperties": false
+    },
+    "scenario": {
+      "type": "object",
+      "required": ["id", "steps"],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/identifier"
+        },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "init": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "step": {
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "highlight",
+            "animate-edge",
+            "update-stat",
+            "log",
+            "delay",
+            "conditional",
+            "goto",
+            "parallel",
+            "reset"
+          ]
+        },
+        "nodes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "edge": { "type": "string" },
+        "style": {
+          "$ref": "#/definitions/animationStyle"
+        },
+        "label": { "type": "string" },
+        "duration": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1000
+        },
+        "log": {
+          "$ref": "#/definitions/logMessage"
+        },
+        "stats": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "condition": {
+          "$ref": "#/definitions/expression"
+        },
+        "then": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/step" }
+        },
+        "else": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/step" }
+        },
+        "scenario": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/step" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "animationStyle": {
+      "type": "object",
+      "properties": {
+        "color": { "$ref": "#/definitions/hexColor" },
+        "glow": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "logMessage": {
+      "type": "object",
+      "required": ["message"],
+      "properties": {
+        "message": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["info", "success", "warning", "error"],
+          "default": "info"
+        }
+      },
+      "additionalProperties": false
+    },
+    "controls": {
+      "type": "object",
+      "properties": {
+        "showDefaults": {
+          "type": "boolean",
+          "default": true
+        },
+        "scenarios": {
+          "$ref": "#/definitions/controlGroup"
+        },
+        "speed": {
+          "$ref": "#/definitions/speedControl"
+        },
+        "buttons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/button"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "controlGroup": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["button-group"],
+          "default": "button-group"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label"],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "default": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "speedControl": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["select", "slider"],
+          "default": "select"
+        },
+        "label": { "type": "string" },
+        "default": {
+          "type": "number",
+          "description": "Default speed multiplier"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "number" },
+              "label": { "type": "string" },
+              "default": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "button": {
+      "type": "object",
+      "required": ["id", "label", "action"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "action": {
+          "type": "string",
+          "enum": ["start", "reset", "pause"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "stat": {
+      "type": "object",
+      "required": ["id", "label"],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/identifier"
+        },
+        "label": { "type": "string" },
+        "unit": { "type": "string" },
+        "format": { "type": "string" },
+        "compute": {
+          "$ref": "#/definitions/expression"
+        }
+      },
+      "additionalProperties": false
+    },
+    "loggingConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "maxEntries": {
+          "type": "number",
+          "minimum": 1,
+          "default": 20
+        },
+        "timestampFormat": {
+          "type": "string",
+          "default": "HH:mm:ss"
+        },
+        "styles": {
+          "type": "object",
+          "properties": {
+            "info": { "$ref": "#/definitions/logStyle" },
+            "success": { "$ref": "#/definitions/logStyle" },
+            "warning": { "$ref": "#/definitions/logStyle" },
+            "error": { "$ref": "#/definitions/logStyle" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "logStyle": {
+      "type": "object",
+      "properties": {
+        "color": { "$ref": "#/definitions/hexColor" },
+        "icon": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "expression": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "$var": { "type": "string" }
+          },
+          "required": ["$var"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$random-bool": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Random boolean with given probability (0-1)"
+            }
+          },
+          "required": ["$random-bool"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$random": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "probability": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "required": ["probability"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "min": { "type": "number" },
+                    "max": { "type": "number" }
+                  },
+                  "required": ["min", "max"],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": ["$random"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$add": {
+              "type": "array",
+              "items": {}
+            }
+          },
+          "required": ["$add"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$multiply": {
+              "type": "array",
+              "items": {}
+            }
+          },
+          "required": ["$multiply"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$subtract": {
+              "type": "array",
+              "items": {},
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": ["$subtract"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$if": {
+              "type": "object",
+              "properties": {
+                "condition": {},
+                "then": {},
+                "else": {}
+              },
+              "required": ["condition", "then"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["$if"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$eq": {
+              "type": "array",
+              "items": {},
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": ["$eq"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$gt": {
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": ["$gt"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$and": {
+              "type": "array",
+              "items": {}
+            }
+          },
+          "required": ["$and"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$or": {
+              "type": "array",
+              "items": {}
+            }
+          },
+          "required": ["$or"],
+          "additionalProperties": false
+        },
+        { "type": "number" },
+        { "type": "string" },
+        { "type": "boolean" }
+      ]
+    },
+    "point": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0 },
+        "y": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Lowercase alphanumeric identifier with hyphens"
+    },
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
+      "description": "Hex color code (#RGB or #RRGGBB)"
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "$ref": "#/definitions/headerConfig"
+        },
+        "legend": {
+          "$ref": "#/definitions/legendConfig"
+        },
+        "footer": {
+          "$ref": "#/definitions/footerConfig"
+        }
+      },
+      "additionalProperties": false
+    },
+    "headerConfig": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "style": {
+          "type": "object",
+          "properties": {
+            "background": { "type": "string" },
+            "color": { "type": "string" },
+            "padding": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "legendConfig": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "title": { "type": "string" },
+        "position": {
+          "type": "string",
+          "enum": ["top", "bottom"],
+          "default": "top"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/legendItem"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "legendItem": {
+      "type": "object",
+      "required": ["color", "label"],
+      "properties": {
+        "color": { "type": "string" },
+        "label": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "footerConfig": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "style": {
+          "type": "object",
+          "properties": {
+            "background": { "type": "string" },
+            "color": { "type": "string" },
+            "padding": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "preset": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "default": {
+          "type": "boolean",
+          "default": false
+        },
+        "extends": {
+          "type": "string",
+          "description": "ID of preset to inherit from"
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Variable values for this preset"
+        }
+      },
+      "additionalProperties": false
+    },
+    "comparison": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "title": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/comparisonItem"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "comparisonItem": {
+      "type": "object",
+      "required": ["preset", "label", "value"],
+      "properties": {
+        "preset": {
+          "type": "string",
+          "description": "ID of the preset this comparison refers to"
+        },
+        "label": { "type": "string" },
+        "value": { "type": "string" },
+        "description": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

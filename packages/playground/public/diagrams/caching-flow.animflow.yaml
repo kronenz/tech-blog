@@ -1,0 +1,553 @@
+version: "1.0"
+
+metadata:
+  title: "Caching Flow Diagram"
+  author: "AnimFlow"
+  description: "Authentication and caching flow visualization"
+  tags:
+    - caching
+    - authentication
+    - system-architecture
+
+# Layout configuration for enhanced UI
+layout:
+  header:
+    title: "Caching & Authentication Flow"
+    subtitle: "Real-time visualization of request handling with cache optimization"
+    style:
+      background: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
+      color: "#ffffff"
+  legend:
+    enabled: true
+    title: "Request Flow Legend"
+    items:
+      - color: "#0ea5e9"
+        label: "Client Request"
+      - color: "#22c55e"
+        label: "Cache Hit"
+      - color: "#f97316"
+        label: "Auth Required"
+      - color: "#ef4444"
+        label: "Cache Miss"
+  footer:
+    text: "AnimFlow DSL Engine - Interactive Architecture Diagrams"
+    style:
+      background: "#212529"
+      color: "#adb5bd"
+
+# Scenario presets for different simulation modes
+presets:
+  - id: random
+    name: "Random"
+    description: "70% cache hit probability"
+    default: true
+    variables:
+      cacheHitProbability: 0.7
+  - id: no-cache
+    name: "No Cache"
+    description: "Always cache miss (worst case)"
+    variables:
+      cacheHitProbability: 0
+  - id: partial-cache
+    name: "Partial Cache"
+    description: "50% cache hit rate"
+    variables:
+      cacheHitProbability: 0.5
+  - id: full-cache
+    name: "Full Cache"
+    description: "Always cache hit (best case)"
+    variables:
+      cacheHitProbability: 1
+
+# Performance comparison panel
+comparison:
+  enabled: true
+  title: "Performance Comparison"
+  items:
+    - preset: no-cache
+      label: "No Cache"
+      value: "~500ms"
+      description: "Full authentication required for every request"
+      color: "#ef4444"
+    - preset: partial-cache
+      label: "Partial Cache"
+      value: "~250ms"
+      description: "50% requests served from cache"
+      color: "#f97316"
+    - preset: random
+      label: "Random (70%)"
+      value: "~150ms"
+      description: "Typical production cache hit rate"
+      color: "#22c55e"
+    - preset: full-cache
+      label: "Full Cache"
+      value: "~10ms"
+      description: "All requests served from cache"
+      color: "#10b981"
+
+controls:
+  showDefaults: true
+  speed:
+    default: 1
+    options:
+      - label: "0.5x"
+        value: 0.5
+      - label: "1x"
+        value: 1
+      - label: "1.5x"
+        value: 1.5
+      - label: "2x"
+        value: 2
+
+canvas:
+  width: 1100
+  height: 600
+  background: "#f8fafc"
+  sections:
+    - id: client-section
+      label: "Client Layer"
+      bounds:
+        y: 0
+        height: 150
+      style:
+        background: "#f0f9ff"
+        labelColor: "#0369a1"
+    - id: backend-section
+      label: "Backend Services"
+      bounds:
+        y: 150
+        height: 250
+      style:
+        background: "#f0fdf4"
+        labelColor: "#15803d"
+    - id: data-section
+      label: "Data Layer"
+      bounds:
+        y: 400
+        height: 200
+      style:
+        background: "#fef3c7"
+        labelColor: "#b45309"
+
+nodes:
+  - id: client
+    label: "Client\nApplication"
+    position:
+      x: 150
+      y: 80
+    section: client-section
+    style:
+      color: "#0ea5e9"
+      shape: rounded-rect
+      width: 140
+      height: 70
+
+  - id: go-backend
+    label: "Go Backend\n(API Gateway)"
+    position:
+      x: 400
+      y: 200
+    section: backend-section
+    style:
+      color: "#22c55e"
+      shape: rounded-rect
+      width: 140
+      height: 70
+
+  - id: go-cache
+    label: "Go Cache\n(In-Memory)"
+    position:
+      x: 400
+      y: 320
+    section: backend-section
+    style:
+      color: "#84cc16"
+      shape: rounded-rect
+      width: 130
+      height: 60
+
+  - id: keycloak
+    label: "Keycloak\n(Auth Server)"
+    position:
+      x: 700
+      y: 200
+    section: backend-section
+    style:
+      color: "#f97316"
+      shape: rounded-rect
+      width: 130
+      height: 70
+
+  - id: infinispan
+    label: "Infinispan\n(Distributed Cache)"
+    position:
+      x: 700
+      y: 320
+    section: backend-section
+    style:
+      color: "#ef4444"
+      shape: rounded-rect
+      width: 150
+      height: 60
+
+  - id: ldap
+    label: "LDAP\n(Directory)"
+    position:
+      x: 950
+      y: 260
+    section: backend-section
+    style:
+      color: "#8b5cf6"
+      shape: rounded-rect
+      width: 100
+      height: 60
+
+  - id: redis
+    label: "Redis\n(Session Store)"
+    position:
+      x: 400
+      y: 480
+    section: data-section
+    style:
+      color: "#dc2626"
+      shape: rounded-rect
+      width: 120
+      height: 60
+
+  - id: opa
+    label: "OPA\n(Policy Engine)"
+    position:
+      x: 700
+      y: 480
+    section: data-section
+    style:
+      color: "#6366f1"
+      shape: rounded-rect
+      width: 120
+      height: 60
+
+edges:
+  - id: client-to-backend
+    from: client
+    to: go-backend
+    label: "API Request"
+    style:
+      color: "#64748b"
+      lineType: solid
+      lineWidth: 2
+
+  - id: backend-to-cache
+    from: go-backend
+    to: go-cache
+    label: "Check Cache"
+    style:
+      color: "#64748b"
+      lineType: dashed
+      lineWidth: 2
+
+  - id: backend-to-keycloak
+    from: go-backend
+    to: keycloak
+    label: "Validate JWT"
+    style:
+      color: "#64748b"
+      lineType: solid
+      lineWidth: 2
+
+  - id: keycloak-to-infinispan
+    from: keycloak
+    to: infinispan
+    label: "Session Lookup"
+    style:
+      color: "#64748b"
+      lineType: dashed
+      lineWidth: 2
+
+  - id: keycloak-to-ldap
+    from: keycloak
+    to: ldap
+    label: "User Lookup"
+    style:
+      color: "#64748b"
+      lineType: dotted
+      lineWidth: 2
+
+  - id: cache-to-redis
+    from: go-cache
+    to: redis
+    label: "Persist"
+    style:
+      color: "#64748b"
+      lineType: dashed
+      lineWidth: 2
+
+  - id: backend-to-opa
+    from: go-backend
+    to: opa
+    label: "Policy Check"
+    style:
+      color: "#64748b"
+      lineType: solid
+      lineWidth: 2
+
+scenarios:
+  - id: auth-flow
+    name: "Authentication Flow"
+    description: "Shows the authentication flow from client to backend"
+    steps:
+      # Step 1: Client sends request
+      - action: highlight
+        nodes: [client]
+        style:
+          color: "#0ea5e9"
+          glow: true
+        duration: 800
+
+      # Step 2: Animate to backend
+      - action: animate-edge
+        edge: client-to-backend
+        label: "API Request"
+        style:
+          color: "#0ea5e9"
+        duration: 1000
+
+      # Step 3: Backend receives request
+      - action: highlight
+        nodes: [go-backend]
+        style:
+          color: "#22c55e"
+          glow: true
+        duration: 800
+
+      # Step 4: Check cache
+      - action: animate-edge
+        edge: backend-to-cache
+        label: "Cache Miss"
+        style:
+          color: "#84cc16"
+        duration: 800
+
+      - action: highlight
+        nodes: [go-cache]
+        style:
+          color: "#84cc16"
+          glow: true
+        duration: 500
+
+      # Step 5: Validate JWT with Keycloak
+      - action: animate-edge
+        edge: backend-to-keycloak
+        label: "Validate JWT"
+        style:
+          color: "#f97316"
+        duration: 1000
+
+      - action: highlight
+        nodes: [keycloak]
+        style:
+          color: "#f97316"
+          glow: true
+        duration: 800
+
+      # Step 6: Keycloak checks session in Infinispan
+      - action: animate-edge
+        edge: keycloak-to-infinispan
+        label: "Session Lookup"
+        style:
+          color: "#ef4444"
+        duration: 800
+
+      - action: highlight
+        nodes: [infinispan]
+        style:
+          color: "#ef4444"
+          glow: true
+        duration: 500
+
+      # Step 7: User lookup in LDAP (if needed)
+      - action: animate-edge
+        edge: keycloak-to-ldap
+        label: "User Lookup"
+        style:
+          color: "#8b5cf6"
+        duration: 800
+
+      - action: highlight
+        nodes: [ldap]
+        style:
+          color: "#8b5cf6"
+          glow: true
+        duration: 500
+
+      # Step 8: Policy check with OPA
+      - action: animate-edge
+        edge: backend-to-opa
+        label: "Policy Check"
+        style:
+          color: "#6366f1"
+        duration: 800
+
+      - action: highlight
+        nodes: [opa]
+        style:
+          color: "#6366f1"
+          glow: true
+        duration: 500
+
+      # Step 9: Cache and persist
+      - action: animate-edge
+        edge: cache-to-redis
+        label: "Persist Session"
+        style:
+          color: "#dc2626"
+        duration: 800
+
+      - action: highlight
+        nodes: [redis]
+        style:
+          color: "#dc2626"
+          glow: true
+        duration: 800
+
+      # Final delay before reset
+      - action: delay
+        duration: 1500
+
+      - action: reset
+
+  # Scenario with variables and conditions - demonstrates cache hit/miss
+  - id: cache-simulation
+    name: "Cache Hit/Miss Simulation"
+    description: "Demonstrates conditional branching with random cache hit/miss"
+    init:
+      # 70% chance of cache hit
+      cacheHit: { "$random-bool": 0.7 }
+      requestCount: 0
+    steps:
+      # Step 1: Client sends request
+      - action: highlight
+        nodes: [client]
+        style:
+          color: "#0ea5e9"
+          glow: true
+        duration: 600
+
+      # Step 2: Animate to backend
+      - action: animate-edge
+        edge: client-to-backend
+        label: "API Request"
+        style:
+          color: "#0ea5e9"
+        duration: 800
+
+      # Step 3: Backend receives request
+      - action: highlight
+        nodes: [go-backend]
+        style:
+          color: "#22c55e"
+          glow: true
+        duration: 600
+
+      # Step 4: Check cache - conditional based on cacheHit variable
+      - action: animate-edge
+        edge: backend-to-cache
+        label: "Check Cache"
+        style:
+          color: "#84cc16"
+        duration: 600
+
+      - action: highlight
+        nodes: [go-cache]
+        style:
+          color: "#84cc16"
+          glow: true
+        duration: 400
+
+      # Conditional: Cache hit or miss
+      - action: conditional
+        condition: { "$var": "cacheHit" }
+        then:
+          # Cache HIT path - return immediately
+          - action: highlight
+            nodes: [go-cache]
+            style:
+              color: "#22c55e"
+              glow: true
+            duration: 1000
+          - action: delay
+            duration: 500
+        else:
+          # Cache MISS path - go to authentication
+          - action: goto
+            scenario: cache-miss-flow
+
+      # Final delay before reset
+      - action: delay
+        duration: 1000
+
+      - action: reset
+
+  # Sub-scenario for cache miss - called via goto
+  - id: cache-miss-flow
+    name: "Cache Miss Flow"
+    description: "Authentication flow when cache misses"
+    steps:
+      # Validate JWT with Keycloak
+      - action: animate-edge
+        edge: backend-to-keycloak
+        label: "Validate JWT"
+        style:
+          color: "#f97316"
+        duration: 800
+
+      - action: highlight
+        nodes: [keycloak]
+        style:
+          color: "#f97316"
+          glow: true
+        duration: 600
+
+      # Keycloak checks session in Infinispan
+      - action: animate-edge
+        edge: keycloak-to-infinispan
+        label: "Session Lookup"
+        style:
+          color: "#ef4444"
+        duration: 600
+
+      - action: highlight
+        nodes: [infinispan]
+        style:
+          color: "#ef4444"
+          glow: true
+        duration: 400
+
+      # Policy check with OPA
+      - action: animate-edge
+        edge: backend-to-opa
+        label: "Policy Check"
+        style:
+          color: "#6366f1"
+        duration: 600
+
+      - action: highlight
+        nodes: [opa]
+        style:
+          color: "#6366f1"
+          glow: true
+        duration: 400
+
+      # Persist to Redis
+      - action: animate-edge
+        edge: cache-to-redis
+        label: "Cache Result"
+        style:
+          color: "#dc2626"
+        duration: 600
+
+      - action: highlight
+        nodes: [redis]
+        style:
+          color: "#dc2626"
+          glow: true
+        duration: 500

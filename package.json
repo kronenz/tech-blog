@@ -1,0 +1,27 @@
+{
+  "name": "animflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AnimFlow DSL Engine - Declarative animated diagram visualization",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @animflow/core",
+    "dev": "npm run dev -w @animflow/playground",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "eslint packages/*/src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "vitest": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "",
+  "license": "MIT"
+}

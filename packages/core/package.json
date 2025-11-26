@@ -1,0 +1,42 @@
+{
+  "name": "@animflow/core",
+  "version": "0.1.0",
+  "description": "AnimFlow DSL Engine - Core library for parsing, rendering, and animating diagrams",
+  "type": "module",
+  "main": "./dist/animflow.umd.js",
+  "module": "./dist/animflow.esm.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/animflow.esm.js",
+      "require": "./dist/animflow.umd.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "schema"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9"
+  },
+  "peerDependencies": {},
+  "keywords": [
+    "diagram",
+    "animation",
+    "dsl",
+    "visualization",
+    "canvas"
+  ],
+  "author": "",
+  "license": "MIT"
+}
