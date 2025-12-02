@@ -4,19 +4,29 @@
 
 import { AnimFlow } from '@animflow/core';
 
-async function main(): Promise<void> {
+let currentAnimflow: AnimFlow | null = null;
+
+async function loadDiagram(diagramPath: string): Promise<void> {
   const container = document.getElementById('diagram-container');
+  const infoEl = document.getElementById('diagram-info');
+
   if (!container) {
     console.error('Container not found');
     return;
+  }
+
+  // Destroy previous instance
+  if (currentAnimflow) {
+    currentAnimflow.destroy();
+    currentAnimflow = null;
   }
 
   // Show loading state
   container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading diagram...</div>';
 
   try {
-    // Load diagram from YAML file first
-    const response = await fetch('/diagrams/caching-flow.animflow.yaml');
+    // Load diagram from YAML file
+    const response = await fetch(diagramPath);
     if (!response.ok) {
       throw new Error(`Failed to load diagram: ${response.statusText}`);
     }
@@ -25,22 +35,30 @@ async function main(): Promise<void> {
     // Clear loading state before creating AnimFlow
     container.innerHTML = '';
 
-    // Create AnimFlow instance with layout and controls
+    // Create AnimFlow instance with layout, controls, and progress indicator
     const animflow = new AnimFlow({
       container,
       source,
       format: 'yaml',
       autoRender: false,
       showControls: true,
+      showProgress: true,
       enableLayout: true,
-      defaultScenario: 'cache-simulation',
     });
 
     // Render the diagram
     await animflow.render();
 
+    currentAnimflow = animflow;
+
+    // Update info text
+    const config = animflow.getConfig();
+    if (infoEl && config?.metadata) {
+      infoEl.textContent = config.metadata.description || config.metadata.title || 'Diagram loaded';
+    }
+
     console.log('Diagram loaded successfully');
-    console.log('Config:', animflow.getConfig());
+    console.log('Config:', config);
 
     // Listen for events
     animflow.on('render', () => {
@@ -67,7 +85,8 @@ async function main(): Promise<void> {
       console.log(`Preset changed: ${presetId}`);
     });
 
-    // Log available presets
+    // Log available scenarios and presets
+    console.log('Available scenarios:', animflow.getScenarios());
     console.log('Available presets:', animflow.getPresets());
 
     // Make instance available for debugging
@@ -82,9 +101,23 @@ async function main(): Promise<void> {
   }
 }
 
+function init(): void {
+  const select = document.getElementById('diagram-select') as HTMLSelectElement;
+
+  if (select) {
+    // Load initial diagram
+    loadDiagram(select.value);
+
+    // Handle diagram selection change
+    select.addEventListener('change', () => {
+      loadDiagram(select.value);
+    });
+  }
+}
+
 // Run on DOM ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', main);
+  document.addEventListener('DOMContentLoaded', init);
 } else {
-  main();
+  init();
 }

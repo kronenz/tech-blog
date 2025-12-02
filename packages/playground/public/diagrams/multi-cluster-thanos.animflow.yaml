@@ -1,0 +1,1731 @@
+version: "1.0"
+
+metadata:
+  title: "Multi-Cluster Thanos Architecture"
+  author: "AnimFlow"
+  description: "Kube-Prometheus-Stack with Thanos Receiver Pattern across Compute, Storage, and Observability Clusters"
+  tags:
+    - prometheus
+    - thanos
+    - kubernetes
+    - multi-cluster
+    - observability
+    - high-availability
+
+layout:
+  header:
+    title: "Multi-Cluster Observability Architecture"
+    subtitle: "Kube-Prometheus-Stack + Thanos Receiver Pattern with HA (Replica 3)"
+    style:
+      background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)"
+      color: "#ffffff"
+  legend:
+    enabled: true
+    title: "Flow Legend"
+    items:
+      - color: "#f59e0b"
+        label: "Metrics Scrape"
+      - color: "#3b82f6"
+        label: "Remote Write"
+      - color: "#8b5cf6"
+        label: "Thanos gRPC"
+      - color: "#f97316"
+        label: "S3 Upload/Download"
+      - color: "#10b981"
+        label: "Query Path"
+      - color: "#ef4444"
+        label: "Alert Path"
+  footer:
+    text: "Enterprise Multi-Cluster Observability Platform - Thanos HA Architecture"
+    style:
+      background: "#0f0c29"
+      color: "#a0aec0"
+
+presets:
+  - id: write-flow
+    name: "Write Flow"
+    description: "Metrics ingestion from all clusters"
+    default: true
+    variables:
+      showWritePath: true
+      showQueryPath: false
+      showCompaction: false
+  - id: query-flow
+    name: "Query Flow"
+    description: "Query federation across clusters"
+    variables:
+      showWritePath: false
+      showQueryPath: true
+      showCompaction: false
+  - id: compaction-flow
+    name: "Compaction"
+    description: "S3 block compaction and downsampling"
+    variables:
+      showWritePath: false
+      showQueryPath: false
+      showCompaction: true
+  - id: full-flow
+    name: "Full Architecture"
+    description: "Complete data lifecycle"
+    variables:
+      showWritePath: true
+      showQueryPath: true
+      showCompaction: true
+
+comparison:
+  enabled: true
+  title: "Architecture Benefits"
+  items:
+    - preset: write-flow
+      label: "Write HA"
+      value: "3x Replicas"
+      description: "Thanos Receive with replication factor 3"
+      color: "#3b82f6"
+    - preset: query-flow
+      label: "Query HA"
+      value: "<200ms"
+      description: "Distributed query with caching"
+      color: "#10b981"
+    - preset: compaction-flow
+      label: "Retention"
+      value: "∞"
+      description: "Unlimited with S3 + downsampling"
+      color: "#f97316"
+    - preset: full-flow
+      label: "Availability"
+      value: "99.99%"
+      description: "Full HA across all components"
+      color: "#8b5cf6"
+
+controls:
+  showDefaults: true
+  speed:
+    default: 1
+    options:
+      - label: "0.5x"
+        value: 0.5
+      - label: "1x"
+        value: 1
+      - label: "1.5x"
+        value: 1.5
+      - label: "2x"
+        value: 2
+
+canvas:
+  width: 1400
+  height: 950
+  background: "#f1f5f9"
+  sections:
+    - id: compute-cluster
+      label: "Compute Cluster (Prometheus Agent)"
+      bounds:
+        y: 0
+        height: 140
+      style:
+        background: "#dbeafe"
+        labelColor: "#1d4ed8"
+    - id: storage-cluster
+      label: "Storage Cluster (Prometheus Agent)"
+      bounds:
+        y: 140
+        height: 140
+      style:
+        background: "#fef3c7"
+        labelColor: "#b45309"
+    - id: observability-cluster
+      label: "Observability Cluster (Kube-Prometheus-Stack + Thanos)"
+      bounds:
+        y: 280
+        height: 420
+      style:
+        background: "#ede9fe"
+        labelColor: "#6d28d9"
+    - id: object-storage
+      label: "Object Storage (S3)"
+      bounds:
+        y: 700
+        height: 100
+      style:
+        background: "#ffedd5"
+        labelColor: "#c2410c"
+    - id: consumer-layer
+      label: "Consumers"
+      bounds:
+        y: 800
+        height: 150
+      style:
+        background: "#d1fae5"
+        labelColor: "#047857"
+
+nodes:
+  # ========== Compute Cluster ==========
+  - id: compute-apps
+    label: "Compute\nWorkloads"
+    position:
+      x: 100
+      y: 70
+    section: compute-cluster
+    style:
+      color: "#3b82f6"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  - id: compute-node-exporter
+    label: "Node\nExporter"
+    position:
+      x: 250
+      y: 70
+    section: compute-cluster
+    style:
+      color: "#60a5fa"
+      shape: rounded-rect
+      width: 90
+      height: 50
+
+  - id: compute-prom-agent
+    label: "Prometheus\nAgent"
+    position:
+      x: 450
+      y: 70
+    section: compute-cluster
+    style:
+      color: "#e6522c"
+      shape: rounded-rect
+      width: 110
+      height: 50
+
+  # ========== Storage Cluster ==========
+  - id: storage-apps
+    label: "Storage\nWorkloads"
+    position:
+      x: 100
+      y: 210
+    section: storage-cluster
+    style:
+      color: "#f59e0b"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  - id: storage-node-exporter
+    label: "Node\nExporter"
+    position:
+      x: 250
+      y: 210
+    section: storage-cluster
+    style:
+      color: "#fbbf24"
+      shape: rounded-rect
+      width: 90
+      height: 50
+
+  - id: storage-prom-agent
+    label: "Prometheus\nAgent"
+    position:
+      x: 450
+      y: 210
+    section: storage-cluster
+    style:
+      color: "#e6522c"
+      shape: rounded-rect
+      width: 110
+      height: 50
+
+  # ========== Observability Cluster - Prometheus Layer ==========
+  - id: obs-apps
+    label: "Observability\nWorkloads"
+    position:
+      x: 100
+      y: 330
+    section: observability-cluster
+    style:
+      color: "#8b5cf6"
+      shape: rounded-rect
+      width: 110
+      height: 50
+
+  - id: obs-prometheus-1
+    label: "Prometheus\n(Replica 1)"
+    position:
+      x: 280
+      y: 330
+    section: observability-cluster
+    style:
+      color: "#e6522c"
+      shape: rounded-rect
+      width: 110
+      height: 50
+
+  - id: obs-prometheus-2
+    label: "Prometheus\n(Replica 2)"
+    position:
+      x: 430
+      y: 330
+    section: observability-cluster
+    style:
+      color: "#e6522c"
+      shape: rounded-rect
+      width: 110
+      height: 50
+
+  - id: obs-alertmanager
+    label: "Alertmanager\nHA Cluster"
+    position:
+      x: 600
+      y: 330
+    section: observability-cluster
+    style:
+      color: "#ef4444"
+      shape: rounded-rect
+      width: 110
+      height: 50
+
+  # ========== Thanos Sidecar ==========
+  - id: thanos-sidecar-1
+    label: "Sidecar 1"
+    position:
+      x: 280
+      y: 410
+    section: observability-cluster
+    style:
+      color: "#7c3aed"
+      shape: rounded-rect
+      width: 90
+      height: 40
+
+  - id: thanos-sidecar-2
+    label: "Sidecar 2"
+    position:
+      x: 430
+      y: 410
+    section: observability-cluster
+    style:
+      color: "#7c3aed"
+      shape: rounded-rect
+      width: 90
+      height: 40
+
+  # ========== Thanos Receive (HA - 3 Replicas) ==========
+  - id: thanos-receive-router
+    label: "Receive\nRouter"
+    position:
+      x: 800
+      y: 330
+    section: observability-cluster
+    style:
+      color: "#6d28d9"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  - id: thanos-receive-1
+    label: "Receive\nIngestor 1"
+    position:
+      x: 950
+      y: 310
+    section: observability-cluster
+    style:
+      color: "#8b5cf6"
+      shape: rounded-rect
+      width: 100
+      height: 45
+
+  - id: thanos-receive-2
+    label: "Receive\nIngestor 2"
+    position:
+      x: 1100
+      y: 310
+    section: observability-cluster
+    style:
+      color: "#8b5cf6"
+      shape: rounded-rect
+      width: 100
+      height: 45
+
+  - id: thanos-receive-3
+    label: "Receive\nIngestor 3"
+    position:
+      x: 1250
+      y: 310
+    section: observability-cluster
+    style:
+      color: "#8b5cf6"
+      shape: rounded-rect
+      width: 100
+      height: 45
+
+  # ========== Thanos Ruler ==========
+  - id: thanos-ruler-1
+    label: "Ruler 1"
+    position:
+      x: 950
+      y: 380
+    section: observability-cluster
+    style:
+      color: "#a78bfa"
+      shape: rounded-rect
+      width: 80
+      height: 40
+
+  - id: thanos-ruler-2
+    label: "Ruler 2"
+    position:
+      x: 1100
+      y: 380
+    section: observability-cluster
+    style:
+      color: "#a78bfa"
+      shape: rounded-rect
+      width: 80
+      height: 40
+
+  # ========== Thanos Query Layer ==========
+  - id: thanos-query-frontend
+    label: "Query\nFrontend"
+    position:
+      x: 200
+      y: 490
+    section: observability-cluster
+    style:
+      color: "#c4b5fd"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  - id: thanos-query-1
+    label: "Query 1"
+    position:
+      x: 380
+      y: 490
+    section: observability-cluster
+    style:
+      color: "#a78bfa"
+      shape: rounded-rect
+      width: 90
+      height: 50
+
+  - id: thanos-query-2
+    label: "Query 2"
+    position:
+      x: 520
+      y: 490
+    section: observability-cluster
+    style:
+      color: "#a78bfa"
+      shape: rounded-rect
+      width: 90
+      height: 50
+
+  - id: thanos-query-3
+    label: "Query 3"
+    position:
+      x: 660
+      y: 490
+    section: observability-cluster
+    style:
+      color: "#a78bfa"
+      shape: rounded-rect
+      width: 90
+      height: 50
+
+  # ========== Thanos Store Gateway (3 Replicas) ==========
+  - id: thanos-store-1
+    label: "Store\nGateway 1"
+    position:
+      x: 380
+      y: 580
+    section: observability-cluster
+    style:
+      color: "#7c3aed"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  - id: thanos-store-2
+    label: "Store\nGateway 2"
+    position:
+      x: 530
+      y: 580
+    section: observability-cluster
+    style:
+      color: "#7c3aed"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  - id: thanos-store-3
+    label: "Store\nGateway 3"
+    position:
+      x: 680
+      y: 580
+    section: observability-cluster
+    style:
+      color: "#7c3aed"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  # ========== Thanos Compactor ==========
+  - id: thanos-compactor
+    label: "Compactor\n(Singleton)"
+    position:
+      x: 900
+      y: 580
+    section: observability-cluster
+    style:
+      color: "#5b21b6"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  # ========== Bucket Web ==========
+  - id: thanos-bucket-web
+    label: "Bucket\nWeb UI"
+    position:
+      x: 1100
+      y: 580
+    section: observability-cluster
+    style:
+      color: "#c084fc"
+      shape: rounded-rect
+      width: 90
+      height: 50
+
+  # ========== Object Storage (S3) ==========
+  - id: s3-bucket
+    label: "S3 Bucket\n(metrics-thanos)"
+    position:
+      x: 600
+      y: 745
+    section: object-storage
+    style:
+      color: "#f97316"
+      shape: rounded-rect
+      width: 160
+      height: 50
+
+  - id: s3-replica-info
+    label: "Replication\nFactor: 3"
+    position:
+      x: 900
+      y: 745
+    section: object-storage
+    style:
+      color: "#ea580c"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  # ========== Consumers ==========
+  - id: grafana
+    label: "Grafana"
+    position:
+      x: 150
+      y: 870
+    section: consumer-layer
+    style:
+      color: "#10b981"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  - id: alerting-webhook
+    label: "Alert\nWebhooks"
+    position:
+      x: 350
+      y: 870
+    section: consumer-layer
+    style:
+      color: "#ef4444"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  - id: pagerduty
+    label: "PagerDuty"
+    position:
+      x: 500
+      y: 870
+    section: consumer-layer
+    style:
+      color: "#22c55e"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+  - id: slack
+    label: "Slack"
+    position:
+      x: 650
+      y: 870
+    section: consumer-layer
+    style:
+      color: "#6366f1"
+      shape: rounded-rect
+      width: 80
+      height: 50
+
+  - id: api-consumers
+    label: "API\nConsumers"
+    position:
+      x: 800
+      y: 870
+    section: consumer-layer
+    style:
+      color: "#0ea5e9"
+      shape: rounded-rect
+      width: 100
+      height: 50
+
+edges:
+  # ========== Compute Cluster Scrape ==========
+  - id: compute-apps-to-agent
+    from: compute-apps
+    to: compute-prom-agent
+    label: "scrape"
+    style:
+      color: "#f59e0b"
+      lineType: solid
+      lineWidth: 2
+
+  - id: compute-node-to-agent
+    from: compute-node-exporter
+    to: compute-prom-agent
+    label: "scrape"
+    style:
+      color: "#f59e0b"
+      lineType: solid
+      lineWidth: 2
+
+  # ========== Storage Cluster Scrape ==========
+  - id: storage-apps-to-agent
+    from: storage-apps
+    to: storage-prom-agent
+    label: "scrape"
+    style:
+      color: "#f59e0b"
+      lineType: solid
+      lineWidth: 2
+
+  - id: storage-node-to-agent
+    from: storage-node-exporter
+    to: storage-prom-agent
+    label: "scrape"
+    style:
+      color: "#f59e0b"
+      lineType: solid
+      lineWidth: 2
+
+  # ========== Remote Write to Thanos Receive ==========
+  - id: compute-agent-to-receive
+    from: compute-prom-agent
+    to: thanos-receive-router
+    label: "remote_write"
+    style:
+      color: "#3b82f6"
+      lineType: solid
+      lineWidth: 2
+
+  - id: storage-agent-to-receive
+    from: storage-prom-agent
+    to: thanos-receive-router
+    label: "remote_write"
+    style:
+      color: "#3b82f6"
+      lineType: solid
+      lineWidth: 2
+
+  # ========== Observability Cluster Internal ==========
+  - id: obs-apps-to-prom1
+    from: obs-apps
+    to: obs-prometheus-1
+    label: "scrape"
+    style:
+      color: "#f59e0b"
+      lineType: solid
+      lineWidth: 2
+
+  - id: obs-apps-to-prom2
+    from: obs-apps
+    to: obs-prometheus-2
+    label: "scrape"
+    style:
+      color: "#f59e0b"
+      lineType: solid
+      lineWidth: 2
+
+  - id: prom1-to-alertmanager
+    from: obs-prometheus-1
+    to: obs-alertmanager
+    label: "alerts"
+    style:
+      color: "#ef4444"
+      lineType: dashed
+      lineWidth: 2
+
+  - id: prom2-to-alertmanager
+    from: obs-prometheus-2
+    to: obs-alertmanager
+    label: "alerts"
+    style:
+      color: "#ef4444"
+      lineType: dashed
+      lineWidth: 2
+
+  # ========== Prometheus to Sidecar ==========
+  - id: prom1-to-sidecar1
+    from: obs-prometheus-1
+    to: thanos-sidecar-1
+    label: "expose"
+    style:
+      color: "#8b5cf6"
+      lineType: dashed
+      lineWidth: 2
+
+  - id: prom2-to-sidecar2
+    from: obs-prometheus-2
+    to: thanos-sidecar-2
+    label: "expose"
+    style:
+      color: "#8b5cf6"
+      lineType: dashed
+      lineWidth: 2
+
+  # ========== Receive Router to Ingestors ==========
+  - id: router-to-ingestor1
+    from: thanos-receive-router
+    to: thanos-receive-1
+    label: "hashring"
+    style:
+      color: "#8b5cf6"
+      lineType: solid
+      lineWidth: 2
+
+  - id: router-to-ingestor2
+    from: thanos-receive-router
+    to: thanos-receive-2
+    label: "hashring"
+    style:
+      color: "#8b5cf6"
+      lineType: solid
+      lineWidth: 2
+
+  - id: router-to-ingestor3
+    from: thanos-receive-router
+    to: thanos-receive-3
+    label: "hashring"
+    style:
+      color: "#8b5cf6"
+      lineType: solid
+      lineWidth: 2
+
+  # ========== Ingestor Replication ==========
+  - id: ingestor1-to-ingestor2
+    from: thanos-receive-1
+    to: thanos-receive-2
+    label: "replicate"
+    style:
+      color: "#a78bfa"
+      lineType: dotted
+      lineWidth: 1
+
+  - id: ingestor2-to-ingestor3
+    from: thanos-receive-2
+    to: thanos-receive-3
+    label: "replicate"
+    style:
+      color: "#a78bfa"
+      lineType: dotted
+      lineWidth: 1
+
+  # ========== Upload to S3 ==========
+  - id: sidecar1-to-s3
+    from: thanos-sidecar-1
+    to: s3-bucket
+    label: "upload"
+    style:
+      color: "#f97316"
+      lineType: solid
+      lineWidth: 2
+
+  - id: sidecar2-to-s3
+    from: thanos-sidecar-2
+    to: s3-bucket
+    label: "upload"
+    style:
+      color: "#f97316"
+      lineType: solid
+      lineWidth: 2
+
+  - id: receive1-to-s3
+    from: thanos-receive-1
+    to: s3-bucket
+    label: "upload"
+    style:
+      color: "#f97316"
+      lineType: solid
+      lineWidth: 2
+
+  - id: receive2-to-s3
+    from: thanos-receive-2
+    to: s3-bucket
+    label: "upload"
+    style:
+      color: "#f97316"
+      lineType: solid
+      lineWidth: 2
+
+  - id: receive3-to-s3
+    from: thanos-receive-3
+    to: s3-bucket
+    label: "upload"
+    style:
+      color: "#f97316"
+      lineType: solid
+      lineWidth: 2
+
+  - id: ruler1-to-s3
+    from: thanos-ruler-1
+    to: s3-bucket
+    label: "upload"
+    style:
+      color: "#f97316"
+      lineType: dashed
+      lineWidth: 1
+
+  - id: ruler2-to-s3
+    from: thanos-ruler-2
+    to: s3-bucket
+    label: "upload"
+    style:
+      color: "#f97316"
+      lineType: dashed
+      lineWidth: 1
+
+  # ========== Compactor ==========
+  - id: compactor-to-s3
+    from: thanos-compactor
+    to: s3-bucket
+    label: "compact"
+    style:
+      color: "#5b21b6"
+      lineType: solid
+      lineWidth: 2
+
+  - id: bucket-web-to-s3
+    from: thanos-bucket-web
+    to: s3-bucket
+    label: "browse"
+    style:
+      color: "#c084fc"
+      lineType: dashed
+      lineWidth: 1
+
+  # ========== Store Gateway to S3 ==========
+  - id: store1-to-s3
+    from: thanos-store-1
+    to: s3-bucket
+    label: "read"
+    style:
+      color: "#f97316"
+      lineType: dashed
+      lineWidth: 2
+
+  - id: store2-to-s3
+    from: thanos-store-2
+    to: s3-bucket
+    label: "read"
+    style:
+      color: "#f97316"
+      lineType: dashed
+      lineWidth: 2
+
+  - id: store3-to-s3
+    from: thanos-store-3
+    to: s3-bucket
+    label: "read"
+    style:
+      color: "#f97316"
+      lineType: dashed
+      lineWidth: 2
+
+  # ========== Query Frontend to Query ==========
+  - id: frontend-to-query1
+    from: thanos-query-frontend
+    to: thanos-query-1
+    label: "split"
+    style:
+      color: "#a78bfa"
+      lineType: solid
+      lineWidth: 2
+
+  - id: frontend-to-query2
+    from: thanos-query-frontend
+    to: thanos-query-2
+    label: "split"
+    style:
+      color: "#a78bfa"
+      lineType: solid
+      lineWidth: 2
+
+  - id: frontend-to-query3
+    from: thanos-query-frontend
+    to: thanos-query-3
+    label: "split"
+    style:
+      color: "#a78bfa"
+      lineType: solid
+      lineWidth: 2
+
+  # ========== Query to StoreAPI endpoints ==========
+  - id: query1-to-sidecar1
+    from: thanos-query-1
+    to: thanos-sidecar-1
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 1
+
+  - id: query1-to-sidecar2
+    from: thanos-query-1
+    to: thanos-sidecar-2
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 1
+
+  - id: query1-to-store1
+    from: thanos-query-1
+    to: thanos-store-1
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 1
+
+  - id: query2-to-store2
+    from: thanos-query-2
+    to: thanos-store-2
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 1
+
+  - id: query3-to-store3
+    from: thanos-query-3
+    to: thanos-store-3
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 1
+
+  - id: query1-to-receive1
+    from: thanos-query-1
+    to: thanos-receive-1
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 1
+
+  - id: query2-to-receive2
+    from: thanos-query-2
+    to: thanos-receive-2
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 1
+
+  - id: query3-to-receive3
+    from: thanos-query-3
+    to: thanos-receive-3
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 1
+
+  # ========== Ruler to Query ==========
+  - id: ruler1-to-query1
+    from: thanos-ruler-1
+    to: thanos-query-1
+    label: "query"
+    style:
+      color: "#a78bfa"
+      lineType: dashed
+      lineWidth: 1
+
+  - id: ruler2-to-query2
+    from: thanos-ruler-2
+    to: thanos-query-2
+    label: "query"
+    style:
+      color: "#a78bfa"
+      lineType: dashed
+      lineWidth: 1
+
+  - id: ruler1-to-alertmanager
+    from: thanos-ruler-1
+    to: obs-alertmanager
+    label: "alerts"
+    style:
+      color: "#ef4444"
+      lineType: dashed
+      lineWidth: 1
+
+  - id: ruler2-to-alertmanager
+    from: thanos-ruler-2
+    to: obs-alertmanager
+    label: "alerts"
+    style:
+      color: "#ef4444"
+      lineType: dashed
+      lineWidth: 1
+
+  # ========== Consumer connections ==========
+  - id: grafana-to-frontend
+    from: grafana
+    to: thanos-query-frontend
+    label: "PromQL"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 2
+
+  - id: alertmanager-to-webhook
+    from: obs-alertmanager
+    to: alerting-webhook
+    label: "notify"
+    style:
+      color: "#ef4444"
+      lineType: solid
+      lineWidth: 2
+
+  - id: alertmanager-to-pagerduty
+    from: obs-alertmanager
+    to: pagerduty
+    label: "notify"
+    style:
+      color: "#ef4444"
+      lineType: solid
+      lineWidth: 2
+
+  - id: alertmanager-to-slack
+    from: obs-alertmanager
+    to: slack
+    label: "notify"
+    style:
+      color: "#ef4444"
+      lineType: solid
+      lineWidth: 2
+
+  - id: api-to-frontend
+    from: api-consumers
+    to: thanos-query-frontend
+    label: "API"
+    style:
+      color: "#0ea5e9"
+      lineType: solid
+      lineWidth: 2
+
+scenarios:
+  # ========== Write Path Flow (Remote Clusters) ==========
+  - id: write-path-flow
+    name: "Write Path Flow"
+    description: "Metrics ingestion from compute and storage clusters via Thanos Receive"
+    steps:
+      # Step 1: Scrape targets in compute cluster (동시에)
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [compute-apps, compute-node-exporter]
+            style:
+              color: "#3b82f6"
+              glow: true
+            duration: 600
+          - action: highlight
+            nodes: [storage-apps, storage-node-exporter]
+            style:
+              color: "#f59e0b"
+              glow: true
+            duration: 600
+
+      # Step 2: Prometheus Agent scrapes in both clusters (동시에)
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: compute-apps-to-agent
+            label: "/metrics"
+            style:
+              color: "#f59e0b"
+            duration: 600
+          - action: animate-edge
+            edge: compute-node-to-agent
+            label: "/metrics"
+            style:
+              color: "#f59e0b"
+            duration: 600
+          - action: animate-edge
+            edge: storage-apps-to-agent
+            label: "/metrics"
+            style:
+              color: "#f59e0b"
+            duration: 600
+          - action: animate-edge
+            edge: storage-node-to-agent
+            label: "/metrics"
+            style:
+              color: "#f59e0b"
+            duration: 600
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [compute-prom-agent, storage-prom-agent]
+            style:
+              color: "#e6522c"
+              glow: true
+            duration: 500
+
+      # Step 3: Remote write to Thanos Receive Router (동시에)
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: compute-agent-to-receive
+            label: "remote_write"
+            style:
+              color: "#3b82f6"
+            duration: 1000
+          - action: animate-edge
+            edge: storage-agent-to-receive
+            label: "remote_write"
+            style:
+              color: "#3b82f6"
+            duration: 1000
+
+      - action: highlight
+        nodes: [thanos-receive-router]
+        style:
+          color: "#6d28d9"
+          glow: true
+        duration: 600
+
+      # Step 4: Router distributes to ingestors via consistent hashring
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: router-to-ingestor1
+            label: "hashring"
+            style:
+              color: "#8b5cf6"
+            duration: 700
+          - action: animate-edge
+            edge: router-to-ingestor2
+            label: "hashring"
+            style:
+              color: "#8b5cf6"
+            duration: 700
+          - action: animate-edge
+            edge: router-to-ingestor3
+            label: "hashring"
+            style:
+              color: "#8b5cf6"
+            duration: 700
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-receive-1, thanos-receive-2, thanos-receive-3]
+            style:
+              color: "#8b5cf6"
+              glow: true
+            duration: 700
+
+      # Step 5: Replication between ingestors (replication factor = 3)
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: ingestor1-to-ingestor2
+            label: "replicate"
+            style:
+              color: "#a78bfa"
+            duration: 500
+          - action: animate-edge
+            edge: ingestor2-to-ingestor3
+            label: "replicate"
+            style:
+              color: "#a78bfa"
+            duration: 500
+
+      # Step 6: Upload TSDB blocks to S3 (2시간 블록 단위)
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: receive1-to-s3
+            label: "upload block"
+            style:
+              color: "#f97316"
+            duration: 1000
+          - action: animate-edge
+            edge: receive2-to-s3
+            label: "upload block"
+            style:
+              color: "#f97316"
+            duration: 1000
+          - action: animate-edge
+            edge: receive3-to-s3
+            label: "upload block"
+            style:
+              color: "#f97316"
+            duration: 1000
+
+      - action: highlight
+        nodes: [s3-bucket]
+        style:
+          color: "#f97316"
+          glow: true
+        duration: 1000
+
+      - action: delay
+        duration: 1000
+
+      - action: reset
+
+  # ========== Observability Internal Flow ==========
+  - id: observability-internal-flow
+    name: "Observability Cluster Flow"
+    description: "Internal metrics collection with Sidecar pattern"
+    steps:
+      # Step 1: Scrape observability workloads
+      - action: highlight
+        nodes: [obs-apps]
+        style:
+          color: "#8b5cf6"
+          glow: true
+        duration: 500
+
+      # Step 2: Prometheus replicas scrape
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: obs-apps-to-prom1
+            label: "/metrics"
+            style:
+              color: "#f59e0b"
+            duration: 700
+          - action: animate-edge
+            edge: obs-apps-to-prom2
+            label: "/metrics"
+            style:
+              color: "#f59e0b"
+            duration: 700
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [obs-prometheus-1, obs-prometheus-2]
+            style:
+              color: "#e6522c"
+              glow: true
+            duration: 600
+
+      # Step 3: Sidecar reads from Prometheus
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: prom1-to-sidecar1
+            label: "read TSDB"
+            style:
+              color: "#8b5cf6"
+            duration: 600
+          - action: animate-edge
+            edge: prom2-to-sidecar2
+            label: "read TSDB"
+            style:
+              color: "#8b5cf6"
+            duration: 600
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-sidecar-1, thanos-sidecar-2]
+            style:
+              color: "#7c3aed"
+              glow: true
+            duration: 500
+
+      # Step 4: Upload to S3
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: sidecar1-to-s3
+            label: "upload block"
+            style:
+              color: "#f97316"
+            duration: 1000
+          - action: animate-edge
+            edge: sidecar2-to-s3
+            label: "upload block"
+            style:
+              color: "#f97316"
+            duration: 1000
+
+      - action: highlight
+        nodes: [s3-bucket]
+        style:
+          color: "#f97316"
+          glow: true
+        duration: 800
+
+      - action: delay
+        duration: 800
+
+      - action: reset
+
+  # ========== Query Path Flow ==========
+  - id: query-path-flow
+    name: "Query Path Flow"
+    description: "Grafana → Query Frontend → Query → StoreAPI endpoints → S3/Sidecar/Receive"
+    steps:
+      # Step 1: Grafana sends PromQL query
+      - action: highlight
+        nodes: [grafana]
+        style:
+          color: "#10b981"
+          glow: true
+        duration: 600
+
+      # Step 2: Query to Query Frontend (caching, splitting)
+      - action: animate-edge
+        edge: grafana-to-frontend
+        label: "PromQL query"
+        style:
+          color: "#10b981"
+        duration: 800
+
+      - action: highlight
+        nodes: [thanos-query-frontend]
+        style:
+          color: "#c4b5fd"
+          glow: true
+        duration: 600
+
+      # Step 3: Frontend splits query by time range and distributes to Query replicas
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: frontend-to-query1
+            label: "time split"
+            style:
+              color: "#a78bfa"
+            duration: 600
+          - action: animate-edge
+            edge: frontend-to-query2
+            label: "time split"
+            style:
+              color: "#a78bfa"
+            duration: 600
+          - action: animate-edge
+            edge: frontend-to-query3
+            label: "time split"
+            style:
+              color: "#a78bfa"
+            duration: 600
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-query-1, thanos-query-2, thanos-query-3]
+            style:
+              color: "#a78bfa"
+              glow: true
+            duration: 500
+
+      # Step 4: Query fans out to Sidecar (실시간 Prometheus 데이터)
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: query1-to-sidecar1
+            label: "StoreAPI (recent)"
+            style:
+              color: "#10b981"
+            duration: 700
+          - action: animate-edge
+            edge: query1-to-sidecar2
+            label: "StoreAPI (recent)"
+            style:
+              color: "#10b981"
+            duration: 700
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-sidecar-1, thanos-sidecar-2]
+            style:
+              color: "#7c3aed"
+              glow: true
+            duration: 500
+
+      # Step 5: Query fans out to Receive (실시간 remote-write 데이터)
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: query1-to-receive1
+            label: "StoreAPI (recent)"
+            style:
+              color: "#10b981"
+            duration: 700
+          - action: animate-edge
+            edge: query2-to-receive2
+            label: "StoreAPI (recent)"
+            style:
+              color: "#10b981"
+            duration: 700
+          - action: animate-edge
+            edge: query3-to-receive3
+            label: "StoreAPI (recent)"
+            style:
+              color: "#10b981"
+            duration: 700
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-receive-1, thanos-receive-2, thanos-receive-3]
+            style:
+              color: "#8b5cf6"
+              glow: true
+            duration: 500
+
+      # Step 6: Query fans out to Store Gateways (히스토리 데이터)
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: query1-to-store1
+            label: "StoreAPI (history)"
+            style:
+              color: "#10b981"
+            duration: 700
+          - action: animate-edge
+            edge: query2-to-store2
+            label: "StoreAPI (history)"
+            style:
+              color: "#10b981"
+            duration: 700
+          - action: animate-edge
+            edge: query3-to-store3
+            label: "StoreAPI (history)"
+            style:
+              color: "#10b981"
+            duration: 700
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-store-1, thanos-store-2, thanos-store-3]
+            style:
+              color: "#7c3aed"
+              glow: true
+            duration: 600
+
+      # Step 7: Store Gateways read blocks from S3
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: store1-to-s3
+            label: "fetch blocks"
+            style:
+              color: "#f97316"
+            duration: 800
+          - action: animate-edge
+            edge: store2-to-s3
+            label: "fetch blocks"
+            style:
+              color: "#f97316"
+            duration: 800
+          - action: animate-edge
+            edge: store3-to-s3
+            label: "fetch blocks"
+            style:
+              color: "#f97316"
+            duration: 800
+
+      - action: highlight
+        nodes: [s3-bucket]
+        style:
+          color: "#f97316"
+          glow: true
+        duration: 600
+
+      # Step 8: Results merge in Query (deduplication)
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-query-1, thanos-query-2, thanos-query-3]
+            style:
+              color: "#10b981"
+              glow: true
+            duration: 600
+
+      # Step 9: Results aggregate in Query Frontend (cache response)
+      - action: highlight
+        nodes: [thanos-query-frontend]
+        style:
+          color: "#10b981"
+          glow: true
+        duration: 600
+
+      # Step 10: Response to Grafana
+      - action: animate-edge
+        edge: grafana-to-frontend
+        label: "response"
+        style:
+          color: "#10b981"
+        duration: 600
+
+      - action: highlight
+        nodes: [grafana]
+        style:
+          color: "#10b981"
+          glow: true
+        duration: 800
+
+      - action: delay
+        duration: 1000
+
+      - action: reset
+
+  # ========== Compaction Flow ==========
+  - id: compaction-flow
+    name: "Compaction Flow"
+    description: "Block compaction and downsampling in S3"
+    steps:
+      # Step 1: Compactor starts
+      - action: highlight
+        nodes: [thanos-compactor]
+        style:
+          color: "#5b21b6"
+          glow: true
+        duration: 800
+
+      # Step 2: Read blocks from S3
+      - action: animate-edge
+        edge: compactor-to-s3
+        label: "read blocks"
+        style:
+          color: "#f97316"
+        duration: 1000
+
+      - action: highlight
+        nodes: [s3-bucket]
+        style:
+          color: "#f97316"
+          glow: true
+        duration: 800
+
+      # Step 3: Compact and downsample
+      - action: highlight
+        nodes: [thanos-compactor]
+        style:
+          color: "#5b21b6"
+          glow: true
+        duration: 1500
+
+      # Step 4: Upload compacted blocks
+      - action: animate-edge
+        edge: compactor-to-s3
+        label: "write compacted"
+        style:
+          color: "#5b21b6"
+        duration: 1000
+
+      - action: highlight
+        nodes: [s3-bucket, s3-replica-info]
+        style:
+          color: "#f97316"
+          glow: true
+        duration: 1000
+
+      - action: delay
+        duration: 800
+
+      - action: reset
+
+  # ========== Alert Flow ==========
+  - id: alert-flow
+    name: "Alert Flow"
+    description: "Ruler → Query → evaluate rules → Alertmanager → notification channels"
+    steps:
+      # Step 1: Thanos Ruler starts evaluation cycle
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-ruler-1, thanos-ruler-2]
+            style:
+              color: "#a78bfa"
+              glow: true
+            duration: 600
+
+      # Step 2: Ruler queries Thanos Query for metrics data
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: ruler1-to-query1
+            label: "PromQL eval"
+            style:
+              color: "#a78bfa"
+            duration: 700
+          - action: animate-edge
+            edge: ruler2-to-query2
+            label: "PromQL eval"
+            style:
+              color: "#a78bfa"
+            duration: 700
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-query-1, thanos-query-2]
+            style:
+              color: "#a78bfa"
+              glow: true
+            duration: 500
+
+      # Step 3: Query returns results to Ruler
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-ruler-1, thanos-ruler-2]
+            style:
+              color: "#ef4444"
+              glow: true
+            duration: 600
+
+      # Step 4: Alert condition met - Ruler sends FIRING alert to Alertmanager
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: ruler1-to-alertmanager
+            label: "FIRING"
+            style:
+              color: "#ef4444"
+            duration: 800
+          - action: animate-edge
+            edge: ruler2-to-alertmanager
+            label: "FIRING"
+            style:
+              color: "#ef4444"
+            duration: 800
+
+      - action: highlight
+        nodes: [obs-alertmanager]
+        style:
+          color: "#ef4444"
+          glow: true
+        duration: 700
+
+      # Step 5: Alertmanager deduplicates, groups, and routes alerts
+      - action: delay
+        duration: 300
+
+      # Step 6: Alertmanager sends notifications to channels
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: alertmanager-to-webhook
+            label: "webhook"
+            style:
+              color: "#ef4444"
+            duration: 600
+          - action: animate-edge
+            edge: alertmanager-to-pagerduty
+            label: "page"
+            style:
+              color: "#ef4444"
+            duration: 600
+          - action: animate-edge
+            edge: alertmanager-to-slack
+            label: "message"
+            style:
+              color: "#ef4444"
+            duration: 600
+
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [alerting-webhook, pagerduty, slack]
+            style:
+              color: "#ef4444"
+              glow: true
+            duration: 800
+
+      # Step 7: Ruler also uploads recording rule results to S3
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: ruler1-to-s3
+            label: "recording rules"
+            style:
+              color: "#f97316"
+            duration: 800
+          - action: animate-edge
+            edge: ruler2-to-s3
+            label: "recording rules"
+            style:
+              color: "#f97316"
+            duration: 800
+
+      - action: highlight
+        nodes: [s3-bucket]
+        style:
+          color: "#f97316"
+          glow: true
+        duration: 600
+
+      - action: delay
+        duration: 1000
+
+      - action: reset
+
+  # ========== Full Architecture Demo ==========
+  - id: full-architecture-demo
+    name: "Full Architecture Demo"
+    description: "Complete data lifecycle: Write → Query → Compaction → Alert"
+    steps:
+      # 1. Remote clusters write path
+      - action: goto
+        scenario: write-path-flow
+
+      - action: delay
+        duration: 500
+
+      # 2. Observability cluster internal (Sidecar pattern)
+      - action: goto
+        scenario: observability-internal-flow
+
+      - action: delay
+        duration: 500
+
+      # 3. Query path from Grafana
+      - action: goto
+        scenario: query-path-flow
+
+      - action: delay
+        duration: 500
+
+      # 4. Compaction and downsampling
+      - action: goto
+        scenario: compaction-flow
+
+      - action: delay
+        duration: 500
+
+      # 5. Alerting flow
+      - action: goto
+        scenario: alert-flow

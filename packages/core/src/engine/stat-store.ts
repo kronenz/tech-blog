@@ -5,8 +5,8 @@
 import type { StatState, StatFormat } from '../types';
 import { DEFAULT_STAT_FORMAT, DEFAULT_STAT_VALUE } from '../types';
 
-/** Stat definition for initialization */
-export interface StatDefinition {
+/** Stat definition for store initialization */
+export interface StatStoreDefinition {
   id: string;
   label: string;
   initialValue?: number;
@@ -36,7 +36,7 @@ export class StatStore {
   /**
    * Initialize stats from definitions
    */
-  initialize(definitions: StatDefinition[]): void {
+  initialize(definitions: StatStoreDefinition[]): void {
     this.stats.clear();
     for (const def of definitions) {
       this.stats.set(def.id, {

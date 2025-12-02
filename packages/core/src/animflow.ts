@@ -5,8 +5,8 @@
 import { Parser } from './parser';
 import { Diagram } from './model';
 import { CanvasRenderer, AnimationManager } from './renderer';
-import { ScenarioRunner, type ScenarioState } from './engine';
-import { ControlBar, LayoutManager, HeaderPanel, LegendPanel, FooterPanel, PresetSelector, ComparisonPanel } from './ui';
+import { ScenarioRunner, type ScenarioState, type StepProgressEvent } from './engine';
+import { ControlBar, LayoutManager, HeaderPanel, LegendPanel, FooterPanel, PresetSelector, ComparisonPanel, StepProgressIndicator } from './ui';
 import type { DiagramConfig, LayoutConfig } from './types';
 
 export type { ScenarioState };
@@ -29,6 +29,8 @@ export interface AnimFlowOptions {
   defaultScenario?: string;
   /** Enable layout system */
   enableLayout?: boolean;
+  /** Show step progress indicator */
+  showProgress?: boolean;
 }
 
 /** AnimFlow events */
@@ -60,6 +62,7 @@ export class AnimFlow {
   private footerPanel: FooterPanel | null = null;
   private presetSelector: PresetSelector | null = null;
   private comparisonPanel: ComparisonPanel | null = null;
+  private stepProgressIndicator: StepProgressIndicator | null = null;
   private diagram: Diagram | null = null;
   private config: DiagramConfig | null = null;
   private options: AnimFlowOptions;
@@ -211,6 +214,11 @@ export class AnimFlow {
       this.renderer.renderOnce();
     });
 
+    // Create step progress indicator if enabled
+    if (this.options.showProgress !== false) {
+      this.createStepProgressIndicator();
+    }
+
     // Create scenario runner with event forwarding
     this.scenarioRunner = new ScenarioRunner(
       this.diagram,
@@ -219,9 +227,14 @@ export class AnimFlow {
         onStateChange: (state) => {
           this.emit('state:change', { state });
           this.controlBar?.setRunning(state === 'running');
+          // Hide progress indicator when not running
+          if (state === 'idle' || state === 'completed') {
+            this.stepProgressIndicator?.hide();
+          }
         },
         onScenarioStart: (scenarioId) => {
           this.emit('scenario:start', { scenarioId });
+          this.stepProgressIndicator?.show();
         },
         onScenarioEnd: (scenarioId) => {
           this.emit('scenario:end', { scenarioId });
@@ -231,6 +244,20 @@ export class AnimFlow {
         },
         onStepEnd: (scenarioId, stepIndex, step) => {
           this.emit('scenario:step', { scenarioId, stepIndex, step, phase: 'end' });
+        },
+        onStepProgress: (progress: StepProgressEvent) => {
+          this.stepProgressIndicator?.update({
+            currentStep: progress.currentStep,
+            totalSteps: progress.totalSteps,
+            scenarioName: progress.scenarioName,
+            stepLabel: progress.stepLabel,
+            branchPath: progress.branchPath,
+            isSubScenario: progress.isSubScenario,
+            parentScenarioName: progress.parentScenarioName,
+          });
+        },
+        onBranchPath: (scenarioId, path, _condition) => {
+          this.emit('scenario:step', { scenarioId, branchPath: path, phase: 'branch' });
         },
         onError: (error) => {
           this.emit('error', { error });
@@ -247,6 +274,19 @@ export class AnimFlow {
     if (this.options.showControls) {
       this.createControlBar();
     }
+  }
+
+  /**
+   * Create the step progress indicator
+   */
+  private createStepProgressIndicator(): void {
+    // Get the container for the progress indicator
+    const progressContainer = this.layoutManager?.getMainSlot() || this.container;
+
+    this.stepProgressIndicator = new StepProgressIndicator({
+      container: progressContainer,
+      position: 'top-right',
+    });
   }
 
   /**
@@ -515,6 +555,7 @@ export class AnimFlow {
     this.presetSelector?.destroy();
     this.comparisonPanel?.destroy();
     this.footerPanel?.destroy();
+    this.stepProgressIndicator?.destroy();
     this.layoutManager?.destroy();
 
     this.renderer.destroy();
@@ -529,6 +570,7 @@ export class AnimFlow {
     this.legendPanel = null;
     this.presetSelector = null;
     this.comparisonPanel = null;
+    this.stepProgressIndicator = null;
     this.footerPanel = null;
     this.eventHandlers.clear();
   }

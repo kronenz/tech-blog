@@ -41,6 +41,32 @@
       font-weight: 500;
     }
 
+    .diagram-selector {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .diagram-selector label {
+      font-size: 0.875rem;
+      color: #a0aec0;
+    }
+
+    .diagram-selector select {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: 1px solid #4a5568;
+      background: #2d3748;
+      color: white;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    .diagram-selector select:hover {
+      border-color: #4f46e5;
+    }
+
     main {
       flex: 1;
       display: flex;
@@ -95,11 +121,19 @@
   <header>
     <h1>AnimFlow Playground</h1>
     <span class="badge">v0.1.0</span>
+    <div class="diagram-selector">
+      <label for="diagram-select">Diagram:</label>
+      <select id="diagram-select">
+        <option value="/diagrams/prometheus-thanos-flow.animflow.yaml">Prometheus Thanos Flow</option>
+        <option value="/diagrams/multi-cluster-thanos.animflow.yaml">Multi-Cluster Thanos</option>
+        <option value="/diagrams/caching-flow.animflow.yaml">Caching Flow</option>
+      </select>
+    </div>
   </header>
 
   <main>
     <div id="diagram-container"></div>
-    <p class="info">Caching Flow Diagram - Static rendering demo</p>
+    <p class="info" id="diagram-info">Select a diagram to view</p>
   </main>
 
   <script type="module" src="/src/main.ts"></script>

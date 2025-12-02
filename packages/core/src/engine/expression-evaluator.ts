@@ -22,6 +22,12 @@ import {
 import type { VariableStore } from './variable-store';
 import { ExecutionError } from '../errors';
 
+// Local type for $random range
+interface RandomRangeValue {
+  min: number;
+  max: number;
+}
+
 /**
  * Expression Evaluator for AnimFlow DSL expressions
  */
@@ -64,12 +70,16 @@ export class ExpressionEvaluator {
     // Random expressions
     if (isRandomExpression(expr)) {
       if ('$random-bool' in expr) {
-        const probability = expr['$random-bool'];
+        const probability = (expr as { '$random-bool': number })['$random-bool'];
         return Math.random() < probability;
       }
       if ('$random' in expr) {
-        const { min, max } = expr.$random;
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+        const randomValue = (expr as { $random: { probability?: number; min?: number; max?: number } }).$random;
+        if ('probability' in randomValue && randomValue.probability !== undefined) {
+          return Math.random() < randomValue.probability;
+        }
+        const rangeValue = randomValue as RandomRangeValue;
+        return Math.floor(Math.random() * (rangeValue.max - rangeValue.min + 1)) + rangeValue.min;
       }
     }
 
@@ -138,14 +148,14 @@ export class ExpressionEvaluator {
       return Boolean(va) || Boolean(vb);
     }
 
-    // Conditional expression: { $if: [condition, thenValue, elseValue] }
+    // Conditional expression: { $if: { condition, then, else } }
     if (isIfExpression(expr)) {
-      const [condition, thenValue, elseValue] = expr.$if;
+      const { condition, then: thenValue, else: elseValue } = expr.$if;
       const condResult = this.evaluate(condition);
       if (condResult) {
         return this.evaluate(thenValue);
       }
-      return this.evaluate(elseValue);
+      return elseValue !== undefined ? this.evaluate(elseValue) : false;
     }
 
     throw new ExecutionError(`Unknown expression type: ${JSON.stringify(expr)}`);

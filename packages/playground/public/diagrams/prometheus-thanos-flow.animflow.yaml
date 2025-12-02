@@ -1,0 +1,840 @@
+version: "1.0"
+
+metadata:
+  title: "Prometheus Remote Write to Thanos Architecture"
+  author: "AnimFlow"
+  description: "Detailed flow visualization of Prometheus metrics pipeline with Thanos for long-term storage"
+  tags:
+    - prometheus
+    - thanos
+    - monitoring
+    - s3
+    - observability
+
+layout:
+  header:
+    title: "Prometheus → Thanos → S3 Architecture"
+    subtitle: "High-availability metrics collection with long-term object storage"
+    style:
+      background: "linear-gradient(135deg, #e6522c 0%, #da4453 50%, #89216b 100%)"
+      color: "#ffffff"
+  legend:
+    enabled: true
+    title: "Data Flow Legend"
+    items:
+      - color: "#e6522c"
+        label: "Metrics Scrape"
+      - color: "#3b82f6"
+        label: "Remote Write"
+      - color: "#8b5cf6"
+        label: "Thanos Internal"
+      - color: "#f59e0b"
+        label: "S3 Upload"
+      - color: "#10b981"
+        label: "Query Path"
+  footer:
+    text: "Prometheus + Thanos Long-Term Storage Architecture"
+    style:
+      background: "#1a1a2e"
+      color: "#a0aec0"
+
+presets:
+  - id: write-path
+    name: "Write Path"
+    description: "Follow metrics from scrape to S3"
+    default: true
+    variables:
+      showWritePath: true
+      showQueryPath: false
+  - id: query-path
+    name: "Query Path"
+    description: "Follow query from Grafana to storage"
+    variables:
+      showWritePath: false
+      showQueryPath: true
+  - id: full-flow
+    name: "Full Flow"
+    description: "Complete write and query cycle"
+    variables:
+      showWritePath: true
+      showQueryPath: true
+
+comparison:
+  enabled: true
+  title: "Storage Comparison"
+  items:
+    - preset: write-path
+      label: "Local TSDB"
+      value: "2 weeks"
+      description: "Default Prometheus retention"
+      color: "#e6522c"
+    - preset: query-path
+      label: "Thanos Store"
+      value: "∞"
+      description: "Unlimited with S3 backend"
+      color: "#8b5cf6"
+    - preset: full-flow
+      label: "Query Latency"
+      value: "<100ms"
+      description: "With proper caching"
+      color: "#10b981"
+
+controls:
+  showDefaults: true
+  speed:
+    default: 1
+    options:
+      - label: "0.5x"
+        value: 0.5
+      - label: "1x"
+        value: 1
+      - label: "1.5x"
+        value: 1.5
+      - label: "2x"
+        value: 2
+
+canvas:
+  width: 1200
+  height: 700
+  background: "#f8fafc"
+  sections:
+    - id: targets-section
+      label: "Scrape Targets"
+      bounds:
+        y: 0
+        height: 120
+      style:
+        background: "#fef3c7"
+        labelColor: "#b45309"
+    - id: prometheus-section
+      label: "Prometheus Layer"
+      bounds:
+        y: 120
+        height: 180
+      style:
+        background: "#fee2e2"
+        labelColor: "#dc2626"
+    - id: thanos-section
+      label: "Thanos Components"
+      bounds:
+        y: 300
+        height: 220
+      style:
+        background: "#ede9fe"
+        labelColor: "#7c3aed"
+    - id: storage-section
+      label: "Object Storage"
+      bounds:
+        y: 520
+        height: 100
+      style:
+        background: "#fef9c3"
+        labelColor: "#ca8a04"
+    - id: query-section
+      label: "Query Layer"
+      bounds:
+        y: 620
+        height: 80
+      style:
+        background: "#d1fae5"
+        labelColor: "#059669"
+
+nodes:
+  # Scrape Targets
+  - id: app-pods
+    label: "Application\nPods"
+    position:
+      x: 150
+      y: 60
+    section: targets-section
+    style:
+      color: "#f59e0b"
+      shape: rounded-rect
+      width: 120
+      height: 55
+
+  - id: node-exporter
+    label: "Node\nExporter"
+    position:
+      x: 350
+      y: 60
+    section: targets-section
+    style:
+      color: "#f59e0b"
+      shape: rounded-rect
+      width: 100
+      height: 55
+
+  - id: kube-state
+    label: "Kube-State\nMetrics"
+    position:
+      x: 530
+      y: 60
+    section: targets-section
+    style:
+      color: "#f59e0b"
+      shape: rounded-rect
+      width: 110
+      height: 55
+
+  # Prometheus Layer
+  - id: prometheus-1
+    label: "Prometheus\nReplica 1"
+    position:
+      x: 200
+      y: 180
+    section: prometheus-section
+    style:
+      color: "#e6522c"
+      shape: rounded-rect
+      width: 130
+      height: 65
+
+  - id: prometheus-2
+    label: "Prometheus\nReplica 2"
+    position:
+      x: 450
+      y: 180
+    section: prometheus-section
+    style:
+      color: "#e6522c"
+      shape: rounded-rect
+      width: 130
+      height: 65
+
+  - id: tsdb-1
+    label: "Local TSDB"
+    position:
+      x: 200
+      y: 265
+    section: prometheus-section
+    style:
+      color: "#dc2626"
+      shape: rounded-rect
+      width: 100
+      height: 40
+
+  - id: tsdb-2
+    label: "Local TSDB"
+    position:
+      x: 450
+      y: 265
+    section: prometheus-section
+    style:
+      color: "#dc2626"
+      shape: rounded-rect
+      width: 100
+      height: 40
+
+  # Thanos Components
+  - id: thanos-sidecar-1
+    label: "Thanos\nSidecar"
+    position:
+      x: 120
+      y: 350
+    section: thanos-section
+    style:
+      color: "#8b5cf6"
+      shape: rounded-rect
+      width: 100
+      height: 55
+
+  - id: thanos-sidecar-2
+    label: "Thanos\nSidecar"
+    position:
+      x: 370
+      y: 350
+    section: thanos-section
+    style:
+      color: "#8b5cf6"
+      shape: rounded-rect
+      width: 100
+      height: 55
+
+  - id: thanos-receive
+    label: "Thanos\nReceive"
+    position:
+      x: 620
+      y: 350
+    section: thanos-section
+    style:
+      color: "#7c3aed"
+      shape: rounded-rect
+      width: 110
+      height: 55
+
+  - id: thanos-compactor
+    label: "Thanos\nCompactor"
+    position:
+      x: 870
+      y: 350
+    section: thanos-section
+    style:
+      color: "#6d28d9"
+      shape: rounded-rect
+      width: 110
+      height: 55
+
+  - id: thanos-store
+    label: "Thanos\nStore Gateway"
+    position:
+      x: 620
+      y: 440
+    section: thanos-section
+    style:
+      color: "#8b5cf6"
+      shape: rounded-rect
+      width: 130
+      height: 55
+
+  - id: thanos-query
+    label: "Thanos\nQuery"
+    position:
+      x: 350
+      y: 440
+    section: thanos-section
+    style:
+      color: "#a78bfa"
+      shape: rounded-rect
+      width: 110
+      height: 55
+
+  - id: thanos-query-frontend
+    label: "Query\nFrontend"
+    position:
+      x: 120
+      y: 440
+    section: thanos-section
+    style:
+      color: "#c4b5fd"
+      shape: rounded-rect
+      width: 100
+      height: 55
+
+  # Object Storage
+  - id: s3-bucket
+    label: "S3 / Object Storage\n(Long-term Metrics)"
+    position:
+      x: 620
+      y: 560
+    section: storage-section
+    style:
+      color: "#f59e0b"
+      shape: rounded-rect
+      width: 180
+      height: 50
+
+  # Query Layer
+  - id: grafana
+    label: "Grafana"
+    position:
+      x: 120
+      y: 655
+    section: query-section
+    style:
+      color: "#10b981"
+      shape: rounded-rect
+      width: 100
+      height: 45
+
+  - id: alertmanager
+    label: "Alertmanager"
+    position:
+      x: 350
+      y: 655
+    section: query-section
+    style:
+      color: "#ef4444"
+      shape: rounded-rect
+      width: 110
+      height: 45
+
+edges:
+  # Scrape paths
+  - id: app-to-prom1
+    from: app-pods
+    to: prometheus-1
+    label: "scrape"
+    style:
+      color: "#e6522c"
+      lineType: solid
+      lineWidth: 2
+
+  - id: node-to-prom1
+    from: node-exporter
+    to: prometheus-1
+    label: "scrape"
+    style:
+      color: "#e6522c"
+      lineType: solid
+      lineWidth: 2
+
+  - id: kube-to-prom2
+    from: kube-state
+    to: prometheus-2
+    label: "scrape"
+    style:
+      color: "#e6522c"
+      lineType: solid
+      lineWidth: 2
+
+  # Prometheus to TSDB
+  - id: prom1-to-tsdb1
+    from: prometheus-1
+    to: tsdb-1
+    label: "write"
+    style:
+      color: "#dc2626"
+      lineType: dashed
+      lineWidth: 2
+
+  - id: prom2-to-tsdb2
+    from: prometheus-2
+    to: tsdb-2
+    label: "write"
+    style:
+      color: "#dc2626"
+      lineType: dashed
+      lineWidth: 2
+
+  # Remote Write to Thanos Receive
+  - id: prom1-to-receive
+    from: prometheus-1
+    to: thanos-receive
+    label: "remote_write"
+    style:
+      color: "#3b82f6"
+      lineType: solid
+      lineWidth: 2
+
+  - id: prom2-to-receive
+    from: prometheus-2
+    to: thanos-receive
+    label: "remote_write"
+    style:
+      color: "#3b82f6"
+      lineType: solid
+      lineWidth: 2
+
+  # Sidecar connections
+  - id: prom1-to-sidecar1
+    from: prometheus-1
+    to: thanos-sidecar-1
+    label: "expose"
+    style:
+      color: "#8b5cf6"
+      lineType: dashed
+      lineWidth: 2
+
+  - id: prom2-to-sidecar2
+    from: prometheus-2
+    to: thanos-sidecar-2
+    label: "expose"
+    style:
+      color: "#8b5cf6"
+      lineType: dashed
+      lineWidth: 2
+
+  # Upload to S3
+  - id: sidecar1-to-s3
+    from: thanos-sidecar-1
+    to: s3-bucket
+    label: "upload blocks"
+    style:
+      color: "#f59e0b"
+      lineType: solid
+      lineWidth: 2
+
+  - id: sidecar2-to-s3
+    from: thanos-sidecar-2
+    to: s3-bucket
+    label: "upload blocks"
+    style:
+      color: "#f59e0b"
+      lineType: solid
+      lineWidth: 2
+
+  - id: receive-to-s3
+    from: thanos-receive
+    to: s3-bucket
+    label: "upload"
+    style:
+      color: "#f59e0b"
+      lineType: solid
+      lineWidth: 2
+
+  # Compactor
+  - id: compactor-to-s3
+    from: thanos-compactor
+    to: s3-bucket
+    label: "compact & downsample"
+    style:
+      color: "#6d28d9"
+      lineType: dashed
+      lineWidth: 2
+
+  # Store Gateway
+  - id: store-to-s3
+    from: thanos-store
+    to: s3-bucket
+    label: "read blocks"
+    style:
+      color: "#8b5cf6"
+      lineType: dashed
+      lineWidth: 2
+
+  # Query paths
+  - id: query-to-sidecar1
+    from: thanos-query
+    to: thanos-sidecar-1
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 2
+
+  - id: query-to-sidecar2
+    from: thanos-query
+    to: thanos-sidecar-2
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 2
+
+  - id: query-to-store
+    from: thanos-query
+    to: thanos-store
+    label: "StoreAPI"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 2
+
+  - id: frontend-to-query
+    from: thanos-query-frontend
+    to: thanos-query
+    label: "query"
+    style:
+      color: "#a78bfa"
+      lineType: solid
+      lineWidth: 2
+
+  # Grafana connections
+  - id: grafana-to-frontend
+    from: grafana
+    to: thanos-query-frontend
+    label: "PromQL"
+    style:
+      color: "#10b981"
+      lineType: solid
+      lineWidth: 2
+
+  - id: query-to-alertmanager
+    from: thanos-query
+    to: alertmanager
+    label: "alerts"
+    style:
+      color: "#ef4444"
+      lineType: dashed
+      lineWidth: 2
+
+scenarios:
+  # Main write path scenario
+  - id: write-path-flow
+    name: "Write Path Flow"
+    description: "Follow metrics from scrape targets to S3 storage"
+    steps:
+      # Step 1: Scrape targets active
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [app-pods, node-exporter, kube-state]
+            style:
+              color: "#f59e0b"
+              glow: true
+            duration: 800
+
+      # Step 2: Prometheus scrapes
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: app-to-prom1
+            label: "/metrics"
+            style:
+              color: "#e6522c"
+            duration: 800
+          - action: animate-edge
+            edge: node-to-prom1
+            label: "/metrics"
+            style:
+              color: "#e6522c"
+            duration: 800
+          - action: animate-edge
+            edge: kube-to-prom2
+            label: "/metrics"
+            style:
+              color: "#e6522c"
+            duration: 800
+
+      # Step 3: Prometheus receives metrics
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [prometheus-1, prometheus-2]
+            style:
+              color: "#e6522c"
+              glow: true
+            duration: 800
+
+      # Step 4: Write to local TSDB
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: prom1-to-tsdb1
+            label: "WAL write"
+            style:
+              color: "#dc2626"
+            duration: 600
+          - action: animate-edge
+            edge: prom2-to-tsdb2
+            label: "WAL write"
+            style:
+              color: "#dc2626"
+            duration: 600
+
+      - action: highlight
+        nodes: [tsdb-1, tsdb-2]
+        style:
+          color: "#dc2626"
+          glow: true
+        duration: 500
+
+      # Step 5: Remote write to Thanos Receive
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: prom1-to-receive
+            label: "remote_write"
+            style:
+              color: "#3b82f6"
+            duration: 1000
+          - action: animate-edge
+            edge: prom2-to-receive
+            label: "remote_write"
+            style:
+              color: "#3b82f6"
+            duration: 1000
+
+      - action: highlight
+        nodes: [thanos-receive]
+        style:
+          color: "#7c3aed"
+          glow: true
+        duration: 800
+
+      # Step 6: Sidecar reads from Prometheus
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: prom1-to-sidecar1
+            label: "read blocks"
+            style:
+              color: "#8b5cf6"
+            duration: 700
+          - action: animate-edge
+            edge: prom2-to-sidecar2
+            label: "read blocks"
+            style:
+              color: "#8b5cf6"
+            duration: 700
+
+      - action: highlight
+        nodes: [thanos-sidecar-1, thanos-sidecar-2]
+        style:
+          color: "#8b5cf6"
+          glow: true
+        duration: 600
+
+      # Step 7: Upload to S3
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: sidecar1-to-s3
+            label: "upload block"
+            style:
+              color: "#f59e0b"
+            duration: 1000
+          - action: animate-edge
+            edge: sidecar2-to-s3
+            label: "upload block"
+            style:
+              color: "#f59e0b"
+            duration: 1000
+          - action: animate-edge
+            edge: receive-to-s3
+            label: "upload"
+            style:
+              color: "#f59e0b"
+            duration: 1000
+
+      - action: highlight
+        nodes: [s3-bucket]
+        style:
+          color: "#f59e0b"
+          glow: true
+        duration: 1000
+
+      # Step 8: Compactor processes
+      - action: animate-edge
+        edge: compactor-to-s3
+        label: "compact"
+        style:
+          color: "#6d28d9"
+        duration: 800
+
+      - action: highlight
+        nodes: [thanos-compactor]
+        style:
+          color: "#6d28d9"
+          glow: true
+        duration: 600
+
+      - action: delay
+        duration: 1000
+
+      - action: reset
+
+  # Query path scenario
+  - id: query-path-flow
+    name: "Query Path Flow"
+    description: "Follow a query from Grafana through Thanos to storage"
+    steps:
+      # Step 1: Grafana sends query
+      - action: highlight
+        nodes: [grafana]
+        style:
+          color: "#10b981"
+          glow: true
+        duration: 600
+
+      # Step 2: Query to frontend
+      - action: animate-edge
+        edge: grafana-to-frontend
+        label: "PromQL query"
+        style:
+          color: "#10b981"
+        duration: 800
+
+      - action: highlight
+        nodes: [thanos-query-frontend]
+        style:
+          color: "#c4b5fd"
+          glow: true
+        duration: 500
+
+      # Step 3: Frontend to Query
+      - action: animate-edge
+        edge: frontend-to-query
+        label: "split & cache"
+        style:
+          color: "#a78bfa"
+        duration: 700
+
+      - action: highlight
+        nodes: [thanos-query]
+        style:
+          color: "#a78bfa"
+          glow: true
+        duration: 600
+
+      # Step 4: Query fans out to stores
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: query-to-sidecar1
+            label: "StoreAPI"
+            style:
+              color: "#10b981"
+            duration: 800
+          - action: animate-edge
+            edge: query-to-sidecar2
+            label: "StoreAPI"
+            style:
+              color: "#10b981"
+            duration: 800
+          - action: animate-edge
+            edge: query-to-store
+            label: "StoreAPI"
+            style:
+              color: "#10b981"
+            duration: 800
+
+      # Step 5: Sidecars query Prometheus
+      - action: parallel
+        steps:
+          - action: highlight
+            nodes: [thanos-sidecar-1, thanos-sidecar-2]
+            style:
+              color: "#8b5cf6"
+              glow: true
+            duration: 600
+
+      # Step 6: Store Gateway reads from S3
+      - action: highlight
+        nodes: [thanos-store]
+        style:
+          color: "#8b5cf6"
+          glow: true
+        duration: 500
+
+      - action: animate-edge
+        edge: store-to-s3
+        label: "fetch blocks"
+        style:
+          color: "#8b5cf6"
+        duration: 800
+
+      - action: highlight
+        nodes: [s3-bucket]
+        style:
+          color: "#f59e0b"
+          glow: true
+        duration: 600
+
+      # Step 7: Results aggregate back
+      - action: highlight
+        nodes: [thanos-query]
+        style:
+          color: "#10b981"
+          glow: true
+        duration: 800
+
+      # Step 8: Response to Grafana
+      - action: highlight
+        nodes: [grafana]
+        style:
+          color: "#10b981"
+          glow: true
+        duration: 1000
+
+      - action: delay
+        duration: 1000
+
+      - action: reset
+
+  # Combined flow
+  - id: full-architecture-flow
+    name: "Full Architecture Demo"
+    description: "Complete write and query cycle demonstration"
+    steps:
+      # Write path first
+      - action: goto
+        scenario: write-path-flow
+
+      - action: delay
+        duration: 500
+
+      # Then query path
+      - action: goto
+        scenario: query-path-flow

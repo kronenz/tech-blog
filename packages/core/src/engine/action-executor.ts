@@ -23,7 +23,7 @@ export async function executeAction(
   step: Step,
   context: ActionContext
 ): Promise<void> {
-  const { diagram, animationManager, speedMultiplier } = context;
+  const { speedMultiplier } = context;
   const duration = getDuration(step.duration, speedMultiplier);
 
   switch (step.action) {

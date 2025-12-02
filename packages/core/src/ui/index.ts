@@ -35,3 +35,10 @@ export type { PresetSelectorOptions, PresetInfo } from './preset-selector';
 
 export { ComparisonPanel } from './comparison-panel';
 export type { ComparisonPanelOptions } from './comparison-panel';
+
+// Progress tracking components
+export { StepProgressIndicator } from './step-progress-indicator';
+export type { StepProgressIndicatorOptions, StepProgressInfo } from './step-progress-indicator';
+
+export { FlowNumberOverlay } from './flow-number-overlay';
+export type { FlowNumberOverlayOptions, FlowNumberInfo } from './flow-number-overlay';

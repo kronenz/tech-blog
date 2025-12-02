@@ -171,3 +171,14 @@
 - 최대 노드 수는 100개, 최대 엣지 수는 200개로 가정한다 (성능 최적화 범위)
 - 로그 패널은 최근 20개 항목을 표시한다
 - 무한 루프 방지를 위한 최대 스텝 실행 횟수는 1000회로 설정한다
+
+## Related Specifications
+
+- **[002-animflow-rendering-enhancements](../002-animflow-rendering-enhancements/spec.md)**: 렌더링 룩앤필 개선 (그라데이션, 쉐도우, 다중 패킷 애니메이션, 호버 인터랙션 등)
+
+## Changelog
+
+| Date | Version | Changes |
+|------|---------|---------|
+| 2025-11-26 | 1.0.0 | Initial specification |
+| 2025-11-30 | 1.1.0 | Added reference to rendering enhancements spec |

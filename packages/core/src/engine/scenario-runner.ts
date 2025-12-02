@@ -14,6 +14,20 @@ import { ExecutionError, LimitExceededError } from '../errors';
 /** Scenario execution state */
 export type ScenarioState = 'idle' | 'running' | 'paused' | 'completed';
 
+/** Step progress information */
+export interface StepProgressEvent {
+  scenarioId: string;
+  scenarioName: string;
+  currentStep: number;
+  totalSteps: number;
+  stepLabel?: string;
+  branchPath?: 'then' | 'else';
+  isSubScenario?: boolean;
+  parentScenarioName?: string;
+  nodeIds?: string[];
+  edgeId?: string;
+}
+
 /** Scenario runner events */
 export interface ScenarioRunnerEvents {
   onStateChange?: (state: ScenarioState) => void;
@@ -24,6 +38,10 @@ export interface ScenarioRunnerEvents {
   onLog?: (message: string, type: 'info' | 'success' | 'warning' | 'error') => void;
   onStatUpdate?: (statId: string, value: number) => void;
   onError?: (error: Error) => void;
+  /** Detailed step progress callback */
+  onStepProgress?: (progress: StepProgressEvent) => void;
+  /** Branch path callback for conditional steps */
+  onBranchPath?: (scenarioId: string, path: 'then' | 'else', condition: unknown) => void;
 }
 
 /** Runner configuration */
@@ -55,6 +73,12 @@ export class ScenarioRunner {
   private expressionEvaluator: ExpressionEvaluator;
   private presetStore: PresetStore;
   private activePresetId: string | null = null;
+
+  // Progress tracking
+  private currentScenarioStack: Array<{ id: string; name: string; totalSteps: number }> = [];
+  private currentStepIndex = 0;
+  private currentBranchPath: 'then' | 'else' | undefined = undefined;
+  private visualStepCounter = 0;
 
   constructor(
     diagram: Diagram,
@@ -109,6 +133,9 @@ export class ScenarioRunner {
     // Reset counters
     this.stepExecutionCount = 0;
     this.gotoDepth = 0;
+    this.visualStepCounter = 0;
+    this.currentScenarioStack = [];
+    this.currentBranchPath = undefined;
 
     // Create abort controller for cancellation
     this.abortController = new AbortController();
@@ -145,6 +172,14 @@ export class ScenarioRunner {
       return;
     }
 
+    // Push scenario to stack for tracking
+    const isSubScenario = this.currentScenarioStack.length > 0;
+    this.currentScenarioStack.push({
+      id: scenario.id,
+      name: scenario.name,
+      totalSteps: this.countVisualSteps(scenario.steps),
+    });
+
     // Initialize variables from scenario init block
     if (scenario.init && Object.keys(scenario.init).length > 0) {
       this.variableStore.initializeFrom(
@@ -153,6 +188,9 @@ export class ScenarioRunner {
       );
     }
 
+    // Reset step index for this scenario
+    this.currentStepIndex = 0;
+
     // Execute steps
     for (let i = 0; i < scenario.steps.length; i++) {
       if (this.abortController?.signal.aborted) {
@@ -160,14 +198,38 @@ export class ScenarioRunner {
       }
 
       const step = scenario.steps[i];
-      await this.executeStep(scenario.id, step);
+      await this.executeStep(scenario.id, step, isSubScenario);
     }
+
+    // Pop scenario from stack
+    this.currentScenarioStack.pop();
+  }
+
+  /**
+   * Count visual steps (excluding internal steps like parallel containers)
+   */
+  private countVisualSteps(steps: Step[]): number {
+    let count = 0;
+    for (const step of steps) {
+      if (step.action === 'parallel' && step.parallelSteps) {
+        // Parallel steps count as 1 visual step
+        count++;
+      } else if (step.action === 'conditional') {
+        // Conditional counts as 1 + max of branches
+        const thenCount = step.thenSteps ? this.countVisualSteps(step.thenSteps) : 0;
+        const elseCount = step.elseSteps ? this.countVisualSteps(step.elseSteps) : 0;
+        count += 1 + Math.max(thenCount, elseCount);
+      } else if (step.action !== 'goto') {
+        count++;
+      }
+    }
+    return count;
   }
 
   /**
    * Execute a single step
    */
-  private async executeStep(scenarioId: string, step: Step): Promise<void> {
+  private async executeStep(scenarioId: string, step: Step, isSubScenario = false): Promise<void> {
     // Check execution limit
     this.stepExecutionCount++;
     if (this.stepExecutionCount > this.config.maxStepExecutions) {
@@ -177,6 +239,16 @@ export class ScenarioRunner {
         this.stepExecutionCount
       );
     }
+
+    // Increment visual step counter for trackable actions
+    const isVisualStep = !['goto'].includes(step.action);
+    if (isVisualStep) {
+      this.visualStepCounter++;
+      this.currentStepIndex++;
+    }
+
+    // Emit step progress event
+    this.emitStepProgress(step, isSubScenario);
 
     this.events.onStepStart?.(scenarioId, step.index, step);
 
@@ -210,6 +282,51 @@ export class ScenarioRunner {
   }
 
   /**
+   * Emit step progress event with detailed information
+   */
+  private emitStepProgress(step: Step, isSubScenario: boolean): void {
+    if (!this.events.onStepProgress) return;
+
+    const currentScenario = this.currentScenarioStack[this.currentScenarioStack.length - 1];
+    const parentScenario = this.currentScenarioStack.length > 1
+      ? this.currentScenarioStack[this.currentScenarioStack.length - 2]
+      : undefined;
+
+    if (!currentScenario) return;
+
+    // Build step label
+    let stepLabel = step.label;
+    if (!stepLabel) {
+      if (step.action === 'highlight' && step.nodes) {
+        stepLabel = `Highlight: ${step.nodes.join(', ')}`;
+      } else if (step.action === 'animate-edge' && step.edge) {
+        stepLabel = `Animate: ${step.edge}`;
+      } else if (step.action === 'delay') {
+        stepLabel = 'Delay';
+      } else if (step.action === 'reset') {
+        stepLabel = 'Reset';
+      } else if (step.action === 'parallel') {
+        stepLabel = 'Parallel execution';
+      } else if (step.action === 'conditional') {
+        stepLabel = 'Conditional branch';
+      }
+    }
+
+    this.events.onStepProgress({
+      scenarioId: currentScenario.id,
+      scenarioName: currentScenario.name,
+      currentStep: this.visualStepCounter,
+      totalSteps: currentScenario.totalSteps,
+      stepLabel,
+      branchPath: this.currentBranchPath,
+      isSubScenario,
+      parentScenarioName: parentScenario?.name,
+      nodeIds: step.nodes,
+      edgeId: step.edge,
+    });
+  }
+
+  /**
    * Execute conditional action
    */
   private async executeConditional(
@@ -223,6 +340,13 @@ export class ScenarioRunner {
       conditionResult = this.expressionEvaluator.evaluateCondition(step.condition);
     }
 
+    // Track branch path
+    const branchPath: 'then' | 'else' = conditionResult ? 'then' : 'else';
+    this.currentBranchPath = branchPath;
+
+    // Emit branch path event
+    this.events.onBranchPath?.(scenarioId, branchPath, step.condition);
+
     const stepsToExecute = conditionResult ? step.thenSteps : step.elseSteps;
 
     if (stepsToExecute) {
@@ -230,6 +354,9 @@ export class ScenarioRunner {
         await this.executeStep(scenarioId, subStep);
       }
     }
+
+    // Clear branch path after conditional completes
+    this.currentBranchPath = undefined;
   }
 
   /**
