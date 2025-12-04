@@ -16,6 +16,8 @@ export interface EdgeState {
   animating: boolean;
   animationProgress: number;
   animationLabel?: string;
+  /** Flow number to display on the animation dot */
+  flowNumber?: number;
 }
 
 /**
@@ -71,12 +73,13 @@ export class Edge {
   }
 
   /** Start animation */
-  startAnimation(label?: string): void {
+  startAnimation(label?: string, flowNumber?: number): void {
     this._state = {
       ...this._state,
       animating: true,
       animationProgress: 0,
       animationLabel: label,
+      flowNumber,
     };
   }
 
@@ -95,6 +98,7 @@ export class Edge {
       animating: false,
       animationProgress: 0,
       animationLabel: undefined,
+      flowNumber: undefined,
     };
   }
 

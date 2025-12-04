@@ -79,6 +79,7 @@ export class ScenarioRunner {
   private currentStepIndex = 0;
   private currentBranchPath: 'then' | 'else' | undefined = undefined;
   private visualStepCounter = 0;
+  private animateEdgeCounter = 0;
 
   constructor(
     diagram: Diagram,
@@ -134,6 +135,7 @@ export class ScenarioRunner {
     this.stepExecutionCount = 0;
     this.gotoDepth = 0;
     this.visualStepCounter = 0;
+    this.animateEdgeCounter = 0;
     this.currentScenarioStack = [];
     this.currentBranchPath = undefined;
 
@@ -252,12 +254,18 @@ export class ScenarioRunner {
 
     this.events.onStepStart?.(scenarioId, step.index, step);
 
+    // Increment animate-edge counter before creating context
+    if (step.action === 'animate-edge') {
+      this.animateEdgeCounter++;
+    }
+
     const context: ActionContext = {
       diagram: this.diagram,
       animationManager: this.animationManager,
       speedMultiplier: this.speedMultiplier,
       onLog: this.events.onLog,
       onStatUpdate: this.events.onStatUpdate,
+      flowNumber: step.action === 'animate-edge' ? this.animateEdgeCounter : undefined,
     };
 
     // Handle special action types

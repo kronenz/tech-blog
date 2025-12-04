@@ -19,6 +19,7 @@ export interface EdgeAnimationState {
   duration: number;
   label?: string;
   color?: string;
+  flowNumber?: number;
 }
 
 /**
@@ -80,7 +81,8 @@ export class AnimationManager {
     edgeId: string,
     duration: number,
     label?: string,
-    color?: string
+    color?: string,
+    flowNumber?: number
   ): Promise<void> {
     const edge = this.diagram.getEdge(edgeId);
     if (!edge) {
@@ -96,9 +98,10 @@ export class AnimationManager {
         duration,
         label,
         color,
+        flowNumber,
       });
 
-      edge.startAnimation(label);
+      edge.startAnimation(label, flowNumber);
       if (color) {
         edge.highlight(color);
       }

@@ -1,22 +1,22 @@
 <!--
   Sync Impact Report
   ==================
-  Version Change: 0.0.0 → 1.0.0 (Initial ratification)
+  Version Change: 1.0.0 → 1.1.0 (MINOR - New principles added)
 
-  Modified Principles: N/A (Initial version)
+  Modified Principles:
+  - II. Interactive Visualization → Enhanced with Reader Experience features
+  - V. Blog-First Validation → Enhanced with Authoring Layer features
 
   Added Sections:
-  - Core Principles (6 principles)
-  - Technical Standards
-  - Development Workflow
-  - Governance
+  - VII. LLM-Assisted Authoring (새로운 원칙)
+  - VIII. Reader Experience First (새로운 원칙)
 
-  Removed Sections: N/A (Initial version)
+  Removed Sections: None
 
   Templates Requiring Updates:
-  - .specify/templates/plan-template.md ✅ (already generic, compatible)
-  - .specify/templates/spec-template.md ✅ (already generic, compatible)
-  - .specify/templates/tasks-template.md ✅ (already generic, compatible)
+  - .specify/templates/plan-template.md ✅ (compatible, no changes needed)
+  - .specify/templates/spec-template.md ✅ (compatible, no changes needed)
+  - .specify/templates/tasks-template.md ✅ (compatible, no changes needed)
 
   Follow-up TODOs: None
 -->
@@ -44,6 +44,8 @@
 - 모든 다이어그램은 최소 1개 이상의 시나리오(scenario)를 포함해야 한다
 - 사용자 제어 요소(시작, 리셋, 속도 조절)를 기본 제공해야 한다
 - 시나리오별 통계(stats) 및 로그(logging) 패널을 지원해야 한다
+- **애니메이션 진행 시 flow number를 표시하여 순서를 명확히 해야 한다**
+- **Step-by-step 재생 모드와 타임라인 내비게이션을 지원해야 한다**
 
 **근거:** 인터랙티브 시각화는 복잡한 기술 개념의 이해도를 높이고, 사용자가 직접 시나리오를 탐색하며 학습할 수 있게 한다.
 
@@ -56,6 +58,7 @@
 - 변수 시스템(`set variable = value`)을 통한 런타임 상태 관리를 지원해야 한다
 - 조건부 분기(`if/else`)와 랜덤 값(`random(probability)`)을 지원해야 한다
 - 시나리오 간 이동(`goto`)을 통한 복잡한 플로우 표현이 가능해야 한다
+- **Preset 시스템을 통해 시나리오 파라미터를 쉽게 전환할 수 있어야 한다**
 
 **근거:** 실제 시스템 동작(캐시 히트/미스, 성공/실패 등)을 현실적으로 시뮬레이션하기 위해 조건 분기가 필수적이다.
 
@@ -79,6 +82,8 @@ AnimFlow 엔진은 독립적이고 재사용 가능한 패키지로 구성되어
 - 새로운 DSL 기능 추가 시, 해당 기능을 사용하는 블로그 포스트를 함께 작성해야 한다
 - 기존 HTML 프로토타입(`caching-flow-diagram.html` 등)은 DSL로 마이그레이션하여 검증해야 한다
 - 사용자 피드백 수집을 위해 블로그에 배포된 다이어그램을 우선시해야 한다
+- **Markdown/MDX 내 `\`\`\`animflow` 코드블록으로 다이어그램을 임베드할 수 있어야 한다**
+- **저자가 UI에서 노드/에지를 직접 편집하고 미리보기할 수 있어야 한다**
 
 **근거:** "Eat Your Own Dog Food" 원칙에 따라, 실제 사용을 통해 DSL의 실용성과 표현력을 검증한다.
 
@@ -94,6 +99,32 @@ AnimFlow DSL은 오픈소스이며, 표준 스펙 문서와 JSON Schema를 제�
 
 **근거:** 오픈 표준은 커뮤니티 채택을 촉진하고, 기술 시각화 생태계 발전에 기여한다.
 
+### VII. LLM-Assisted Authoring (LLM 기반 저작 지원)
+
+LLM을 활용하여 기술 글에서 AnimFlow YAML을 자동 생성하고, 작성 생산성을 높여야 한다.
+
+**규칙:**
+- 기술 글 본문에서 엔티티(서비스, 컴포넌트), 관계(요청, 응답, 이벤트), 타임라인을 자동 추출해야 한다
+- `<!-- animflow: "프롬프트" -->` 주석을 통해 특정 구간의 다이어그램 생성을 요청할 수 있어야 한다
+- LLM은 AnimFlow YAML 초안을 생성하고, 저자는 UI에서 미세 조정만 하면 되어야 한다
+- **Consistency Checker**: 글 내용과 다이어그램 간 불일치를 감지하고 리포트해야 한다
+- LLM 호출은 서버 사이드(초안 생성)와 클라이언트 사이드(리라벨링)로 분리해야 한다
+
+**근거:** LLM 지원은 기술 시각화 제작의 진입 장벽을 낮추고, 글-다이어그램 일관성을 보장한다.
+
+### VIII. Reader Experience First (독자 경험 우선)
+
+독자가 기술 콘텐츠를 쉽게 이해하고 탐색할 수 있는 경험을 최우선으로 설계해야 한다.
+
+**규칙:**
+- **글-다이어그램 동기화**: 다이어그램 타임라인 단계와 글 단락이 자동 스크롤로 연동되어야 한다
+- **코드-다이어그램 하이라이트**: 코드 블록 호버 시 관련 노드/에지가 하이라이트되어야 한다
+- **시나리오 전환 UI**: 드롭다운/버튼으로 시나리오(정상, 장애, 지연 등)를 쉽게 전환할 수 있어야 한다
+- **Time-travel 뷰**: 슬라이더로 시간을 이동하며 시스템 상태를 재현할 수 있어야 한다
+- **문맥 Q&A**: 독자가 특정 단계에서 질문하면 LLM이 해당 컨텍스트를 참조하여 답변해야 한다
+
+**근거:** 기술 블로그의 핵심 가치는 독자의 이해도 향상이며, 인터랙티브 기능은 이를 극대화한다.
+
 ## Technical Standards
 
 **플랫폼 기술:**
@@ -101,7 +132,8 @@ AnimFlow DSL은 오픈소스이며, 표준 스펙 문서와 JSON Schema를 제�
 - 렌더러: Canvas 2D (기본), SVG (접근성), WebGL (고성능, 선택적)
 - 파서: js-yaml, ajv (JSON Schema 검증)
 - 에디터: Monaco Editor (선택적)
-- 애니메이션: Web Animations API 또는 GSAP
+- 애니메이션: Web Animations API 또는 requestAnimationFrame
+- LLM 연동: 서버 사이드 (Claude API), 클라이언트 (짧은 프롬프트만)
 
 **DSL 문법 표준:**
 - 기본 문법: AnimFlow DSL v2 (간결 문법)
@@ -125,7 +157,9 @@ AnimFlow DSL은 오픈소스이며, 표준 스펙 문서와 JSON Schema를 제�
 2. **Phase 2 (Core Engine)**: 노드/엣지 확장, 시나리오 엔진, UI 컴포넌트
 3. **Phase 3 (Tooling)**: Monaco 에디터, CLI, 실시간 프리뷰
 4. **Phase 4 (Blog Platform)**: Astro 블로그, MDX 통합, 콘텐츠 제작
-5. **Phase 5 (Ecosystem)**: 플러그인 시스템, 테마, 커뮤니티 갤러리
+5. **Phase 5 (LLM Integration)**: 글 → YAML 생성, Consistency Checker, Q&A 패널
+6. **Phase 6 (Reader Experience)**: 글-다이어그램 동기화, Time-travel, 시나리오 전환 UI
+7. **Phase 7 (Ecosystem)**: 플러그인 시스템, 테마, 커뮤니티 갤러리
 
 **코드 리뷰 요구사항:**
 - 모든 PR은 DSL 스펙 준수 여부를 검증해야 한다
@@ -155,4 +189,4 @@ AnimFlow DSL은 오픈소스이며, 표준 스펙 문서와 JSON Schema를 제�
 - MINOR: 새로운 원칙/섹션 추가 또는 확장
 - PATCH: 문구 수정, 명확화, 오타 수정
 
-**Version**: 1.0.0 | **Ratified**: 2025-11-26 | **Last Amended**: 2025-11-26
+**Version**: 1.1.0 | **Ratified**: 2025-11-26 | **Last Amended**: 2025-12-03

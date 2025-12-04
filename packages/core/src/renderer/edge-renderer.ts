@@ -68,7 +68,7 @@ export function renderEdge(edge: Edge, context: EdgeRenderContext): void {
 
   // Draw animation indicator
   if (state.animating) {
-    drawAnimationDot(ctx, fromPoint, toPoint, state.animationProgress, color);
+    drawAnimationDot(ctx, fromPoint, toPoint, state.animationProgress, color, state.flowNumber);
   }
 
   ctx.restore();
@@ -200,21 +200,33 @@ function drawAnimationDot(
   from: Point,
   to: Point,
   progress: number,
-  color: string
+  color: string,
+  flowNumber?: number
 ): void {
   const x = from.x + (to.x - from.x) * progress;
   const y = from.y + (to.y - from.y) * progress;
 
+  const dotRadius = flowNumber !== undefined ? 10 : 6;
+
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.arc(x, y, 6, 0, Math.PI * 2);
+  ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
   ctx.fill();
 
   // Glow effect
   ctx.shadowColor = color;
   ctx.shadowBlur = 10;
   ctx.beginPath();
-  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.arc(x, y, dotRadius - 2, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
+
+  // Draw flow number inside the dot
+  if (flowNumber !== undefined) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(flowNumber), x, y);
+  }
 }

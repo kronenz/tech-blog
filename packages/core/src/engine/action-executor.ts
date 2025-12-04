@@ -14,6 +14,8 @@ export interface ActionContext {
   speedMultiplier: number;
   onLog?: (message: string, type: 'info' | 'success' | 'warning' | 'error') => void;
   onStatUpdate?: (statId: string, value: number) => void;
+  /** Current flow number for animate-edge actions */
+  flowNumber?: number;
 }
 
 /**
@@ -99,7 +101,7 @@ async function executeAnimateEdge(
   context: ActionContext,
   duration: number
 ): Promise<void> {
-  const { animationManager } = context;
+  const { animationManager, flowNumber } = context;
 
   if (!step.edge) {
     console.warn('animate-edge action missing edge property');
@@ -121,7 +123,8 @@ async function executeAnimateEdge(
     step.edge,
     duration,
     step.label,
-    step.style?.color
+    step.style?.color,
+    flowNumber
   );
 }
 
