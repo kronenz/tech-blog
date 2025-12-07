@@ -1,0 +1,140 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ThemeSwitcher from '../components/ThemeSwitcher.astro';
+---
+
+<BaseLayout title="Settings" description="Customize your blog reading experience">
+  <main class="settings-page">
+    <div class="settings-header">
+      <h1>Settings</h1>
+      <p>블로그의 스타일과 테마를 설정하세요.</p>
+    </div>
+
+    <section class="settings-section">
+      <h2>Appearance</h2>
+      <div class="settings-card">
+        <ThemeSwitcher />
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h2>Preview</h2>
+      <div class="preview-area">
+        <div class="preview-card">
+          <h3>Sample Content</h3>
+          <p>
+            이것은 현재 테마가 적용된 샘플 콘텐츠입니다.
+            다양한 테마와 모드를 선택하여 변화를 확인해보세요.
+          </p>
+          <div class="preview-elements">
+            <a href="#" class="preview-link">Link Example</a>
+            <code>inline code</code>
+            <button class="preview-button">Button</button>
+          </div>
+          <pre><code>{"// Code block example\nfunction greet(name) {\n  return `Hello, ${name}!`;\n}"}</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+  .settings-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--spacing-xl) var(--spacing-md);
+  }
+
+  .settings-header {
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .settings-header h1 {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .settings-header p {
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .settings-section {
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .settings-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .settings-card {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+  }
+
+  .preview-area {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+  }
+
+  .preview-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+  }
+
+  .preview-card h3 {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .preview-card p {
+    color: var(--color-text-secondary);
+  }
+
+  .preview-elements {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .preview-link {
+    color: var(--color-primary);
+  }
+
+  .preview-link:hover {
+    color: var(--color-primary-hover);
+  }
+
+  .preview-button {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 500;
+    transition: background var(--transition-fast);
+  }
+
+  .preview-button:hover {
+    background: var(--color-primary-hover);
+  }
+
+  .preview-card pre {
+    margin: 0;
+  }
+
+  @media (max-width: 480px) {
+    .settings-header h1 {
+      font-size: 1.5rem;
+    }
+  }
+</style>

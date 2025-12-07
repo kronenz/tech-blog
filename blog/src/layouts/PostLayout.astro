@@ -1,0 +1,146 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  post: CollectionEntry<'posts'>;
+}
+
+const { post } = Astro.props;
+const { title, pubDate, updatedDate, description, tags } = post.data;
+
+const formattedDate = pubDate.toLocaleDateString('ko-KR', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+
+const formattedUpdatedDate = updatedDate?.toLocaleDateString('ko-KR', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<BaseLayout title={title} description={description} article={true}>
+  <article class="post">
+    <header class="post-header">
+      <h1 class="post-title">{title}</h1>
+      <div class="post-meta">
+        <time datetime={pubDate.toISOString()}>{formattedDate}</time>
+        {updatedDate && (
+          <span class="updated">
+            (Updated: <time datetime={updatedDate.toISOString()}>{formattedUpdatedDate}</time>)
+          </span>
+        )}
+      </div>
+      {tags.length > 0 && (
+        <div class="post-tags">
+          {tags.map((tag) => (
+            <a href={`/tags/${tag.toLowerCase()}`} class="tag">
+              #{tag}
+            </a>
+          ))}
+        </div>
+      )}
+    </header>
+
+    <div class="post-content">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .post {
+    max-width: 100%;
+  }
+
+  .post-header {
+    margin-bottom: var(--spacing-2xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .post-title {
+    font-size: 2.5rem;
+    margin-bottom: var(--spacing-md);
+    line-height: 1.2;
+  }
+
+  .post-meta {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .updated {
+    margin-left: var(--spacing-sm);
+    font-style: italic;
+  }
+
+  .post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  .tag {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    transition: all var(--transition-fast);
+  }
+
+  .tag:hover {
+    background-color: var(--color-primary);
+    color: white;
+    text-decoration: none;
+  }
+
+  .post-content {
+    line-height: 1.8;
+  }
+
+  .post-content :global(h2) {
+    margin-top: var(--spacing-2xl);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .post-content :global(h3) {
+    margin-top: var(--spacing-xl);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .post-content :global(ul),
+  .post-content :global(ol) {
+    margin-bottom: var(--spacing-md);
+    padding-left: var(--spacing-xl);
+  }
+
+  .post-content :global(li) {
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .post-content :global(blockquote) {
+    border-left: 4px solid var(--color-primary);
+    padding-left: var(--spacing-md);
+    margin: var(--spacing-lg) 0;
+    color: var(--color-text-secondary);
+    font-style: italic;
+  }
+
+  .post-content :global(hr) {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: var(--spacing-2xl) 0;
+  }
+
+  @media (max-width: 768px) {
+    .post-title {
+      font-size: 1.875rem;
+    }
+  }
+</style>

@@ -4,7 +4,8 @@
   "private": true,
   "description": "AnimFlow DSL Engine - Declarative animated diagram visualization",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "blog"
   ],
   "scripts": {
     "build": "npm run build -w @animflow/core",

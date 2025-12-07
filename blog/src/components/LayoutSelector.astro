@@ -1,0 +1,494 @@
+---
+// Layout Selector Component
+// Grid-based layout picker with wireframe previews
+
+import { layoutPresets } from '../config';
+---
+
+<div class="layout-selector-backdrop" id="layout-selector-backdrop" aria-hidden="true"></div>
+
+<div
+  class="layout-selector-modal"
+  id="layout-selector-modal"
+  role="dialog"
+  aria-labelledby="layout-selector-title"
+  aria-modal="true"
+  aria-hidden="true"
+>
+  <div class="layout-selector-header">
+    <h2 id="layout-selector-title">레이아웃 선택</h2>
+    <button
+      class="layout-selector-close"
+      id="layout-selector-close"
+      aria-label="레이아웃 선택 닫기"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <div class="layout-grid" role="radiogroup" aria-label="레이아웃 목록">
+    {layoutPresets.map((layout) => (
+      <button
+        class="layout-card"
+        data-layout-id={layout.id}
+        role="radio"
+        aria-checked="false"
+        aria-label={`${layout.name} - ${layout.description}`}
+      >
+        <div class="layout-preview" data-preview={layout.id}>
+          {/* Wireframe SVG previews */}
+          {layout.id === 'default' && (
+            <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="5" width="100" height="8" rx="2" fill="currentColor" opacity="0.3"/>
+              <rect x="20" y="18" width="35" height="25" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="60" y="18" width="35" height="25" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="20" y="48" width="35" height="25" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="60" y="48" width="35" height="25" rx="2" fill="currentColor" opacity="0.2"/>
+            </svg>
+          )}
+          {layout.id === 'focus-reader' && (
+            <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="5" width="100" height="8" rx="2" fill="currentColor" opacity="0.3"/>
+              <rect x="30" y="18" width="60" height="55" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="38" y="26" width="44" height="4" rx="1" fill="currentColor" opacity="0.4"/>
+              <rect x="38" y="34" width="44" height="3" rx="1" fill="currentColor" opacity="0.15"/>
+              <rect x="38" y="40" width="38" height="3" rx="1" fill="currentColor" opacity="0.15"/>
+              <rect x="38" y="46" width="44" height="3" rx="1" fill="currentColor" opacity="0.15"/>
+              <rect x="38" y="52" width="30" height="3" rx="1" fill="currentColor" opacity="0.15"/>
+            </svg>
+          )}
+          {layout.id === 'classic-blog' && (
+            <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="5" width="100" height="8" rx="2" fill="currentColor" opacity="0.3"/>
+              <rect x="10" y="18" width="70" height="55" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="85" y="18" width="25" height="55" rx="2" fill="currentColor" opacity="0.15"/>
+              <rect x="18" y="26" width="54" height="8" rx="1" fill="currentColor" opacity="0.3"/>
+              <rect x="18" y="38" width="54" height="8" rx="1" fill="currentColor" opacity="0.3"/>
+              <rect x="18" y="50" width="54" height="8" rx="1" fill="currentColor" opacity="0.3"/>
+            </svg>
+          )}
+          {layout.id === 'magazine' && (
+            <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="5" width="100" height="8" rx="2" fill="currentColor" opacity="0.3"/>
+              <rect x="10" y="18" width="30" height="28" rx="2" fill="currentColor" opacity="0.25"/>
+              <rect x="44" y="18" width="30" height="28" rx="2" fill="currentColor" opacity="0.25"/>
+              <rect x="78" y="18" width="30" height="28" rx="2" fill="currentColor" opacity="0.25"/>
+              <rect x="10" y="50" width="30" height="22" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="44" y="50" width="30" height="22" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="78" y="50" width="30" height="22" rx="2" fill="currentColor" opacity="0.2"/>
+            </svg>
+          )}
+          {layout.id === 'code-wide' && (
+            <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="5" width="100" height="8" rx="2" fill="currentColor" opacity="0.3"/>
+              <rect x="10" y="18" width="100" height="28" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="18" y="24" width="40" height="3" rx="1" fill="currentColor" opacity="0.4"/>
+              <rect x="18" y="30" width="60" height="2" rx="1" fill="currentColor" opacity="0.2"/>
+              <rect x="18" y="35" width="50" height="2" rx="1" fill="currentColor" opacity="0.2"/>
+              <rect x="10" y="50" width="48" height="22" rx="2" fill="currentColor" opacity="0.15"/>
+              <rect x="62" y="50" width="48" height="22" rx="2" fill="currentColor" opacity="0.15"/>
+            </svg>
+          )}
+          {layout.id === 'minimal-zen' && (
+            <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="5" width="100" height="6" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="35" y="22" width="50" height="10" rx="2" fill="currentColor" opacity="0.15"/>
+              <rect x="35" y="42" width="50" height="10" rx="2" fill="currentColor" opacity="0.15"/>
+              <rect x="35" y="62" width="50" height="10" rx="2" fill="currentColor" opacity="0.15"/>
+            </svg>
+          )}
+          {layout.id === 'card-gallery' && (
+            <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="5" width="100" height="8" rx="2" fill="currentColor" opacity="0.3"/>
+              <rect x="10" y="18" width="30" height="28" rx="2" fill="currentColor" opacity="0.25"/>
+              <rect x="44" y="18" width="30" height="28" rx="2" fill="currentColor" opacity="0.25"/>
+              <rect x="78" y="18" width="30" height="28" rx="2" fill="currentColor" opacity="0.25"/>
+              <rect x="10" y="50" width="30" height="28" rx="2" fill="currentColor" opacity="0.2"/>
+              <rect x="44" y="50" width="30" height="28" rx="2" fill="currentColor" opacity="0.2"/>
+            </svg>
+          )}
+        </div>
+        <div class="layout-info">
+          <h3 class="layout-name">{layout.name}</h3>
+          <p class="layout-description">{layout.description}</p>
+          <ul class="layout-features">
+            {layout.features.map((feature) => (
+              <li>{feature}</li>
+            ))}
+          </ul>
+        </div>
+        <div class="layout-active-indicator" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+      </button>
+    ))}
+  </div>
+
+  <div id="layout-announcement" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+</div>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .layout-selector-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-normal), visibility var(--transition-normal);
+  }
+
+  .layout-selector-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .layout-selector-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    max-width: 900px;
+    width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-normal), visibility var(--transition-normal), transform var(--transition-normal);
+  }
+
+  .layout-selector-modal.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .layout-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .layout-selector-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--color-text);
+  }
+
+  .layout-selector-close {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .layout-selector-close:hover {
+    color: var(--color-text);
+    background-color: var(--color-bg-secondary);
+  }
+
+  .layout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+  }
+
+  @media (max-width: 600px) {
+    .layout-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .layout-card {
+    position: relative;
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    cursor: pointer;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .layout-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .layout-card:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .layout-card[aria-checked="true"] {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg-secondary));
+  }
+
+  .layout-card[aria-checked="true"] .layout-active-indicator {
+    display: flex;
+  }
+
+  .layout-preview {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm);
+    aspect-ratio: 3/2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .layout-preview svg {
+    width: 100%;
+    height: 100%;
+    color: var(--color-text);
+  }
+
+  .layout-info {
+    flex: 1;
+  }
+
+  .layout-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0 0 var(--spacing-xs) 0;
+  }
+
+  .layout-description {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--spacing-sm) 0;
+    line-height: 1.4;
+  }
+
+  .layout-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .layout-features li {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .layout-active-indicator {
+    display: none;
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    width: 28px;
+    height: 28px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .layout-selector-backdrop,
+    .layout-selector-modal,
+    .layout-card {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  class LayoutManager {
+    private currentLayout: string;
+    private previewLayout: string | null = null;
+
+    constructor() {
+      this.currentLayout = localStorage.getItem('preferred-layout') || 'default';
+      this.init();
+    }
+
+    private init() {
+      this.applyLayout(this.currentLayout);
+      this.setupEventListeners();
+      this.updateUI();
+    }
+
+    private setupEventListeners() {
+      const backdrop = document.getElementById('layout-selector-backdrop');
+      const modal = document.getElementById('layout-selector-modal');
+      const closeBtn = document.getElementById('layout-selector-close');
+      const cards = document.querySelectorAll('.layout-card');
+
+      backdrop?.addEventListener('click', () => this.closeModal());
+      closeBtn?.addEventListener('click', () => this.closeModal());
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal?.classList.contains('active')) {
+          this.closeModal();
+        }
+      });
+
+      cards.forEach((card) => {
+        const layoutId = (card as HTMLElement).dataset.layoutId;
+        if (!layoutId) return;
+
+        card.addEventListener('mouseenter', () => {
+          this.previewLayout = layoutId;
+          this.applyLayout(layoutId);
+        });
+
+        card.addEventListener('mouseleave', () => {
+          this.previewLayout = null;
+          this.applyLayout(this.currentLayout);
+        });
+
+        card.addEventListener('click', () => {
+          this.selectLayout(layoutId);
+        });
+      });
+
+      modal?.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          this.navigateCards(1);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.navigateCards(-1);
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const focused = document.activeElement as HTMLElement;
+          if (focused?.classList.contains('layout-card')) {
+            const layoutId = focused.dataset.layoutId;
+            if (layoutId) this.selectLayout(layoutId);
+          }
+        }
+      });
+    }
+
+    private navigateCards(direction: number) {
+      const cards = Array.from(document.querySelectorAll('.layout-card')) as HTMLElement[];
+      const currentIndex = cards.findIndex((card) => card === document.activeElement);
+      let nextIndex = currentIndex + direction;
+
+      if (nextIndex < 0) nextIndex = cards.length - 1;
+      if (nextIndex >= cards.length) nextIndex = 0;
+
+      cards[nextIndex]?.focus();
+    }
+
+    private applyLayout(layout: string) {
+      if (layout === 'default') {
+        document.documentElement.removeAttribute('data-layout');
+      } else {
+        document.documentElement.setAttribute('data-layout', layout);
+      }
+    }
+
+    selectLayout(layout: string) {
+      this.currentLayout = layout;
+      this.previewLayout = null;
+
+      this.applyLayout(layout);
+      localStorage.setItem('preferred-layout', layout);
+
+      this.updateUI();
+      this.announceChange(layout);
+    }
+
+    private updateUI() {
+      const cards = document.querySelectorAll('.layout-card');
+      cards.forEach((card) => {
+        const layoutId = (card as HTMLElement).dataset.layoutId;
+        const isActive = layoutId === this.currentLayout;
+        card.setAttribute('aria-checked', isActive.toString());
+      });
+    }
+
+    private announceChange(layout: string) {
+      const announcement = document.getElementById('layout-announcement');
+      if (announcement) {
+        const layoutName = document.querySelector(`[data-layout-id="${layout}"] .layout-name`)?.textContent || layout;
+        announcement.textContent = `${layoutName} 레이아웃으로 변경되었습니다`;
+      }
+    }
+
+    openModal() {
+      const backdrop = document.getElementById('layout-selector-backdrop');
+      const modal = document.getElementById('layout-selector-modal');
+
+      backdrop?.classList.add('active');
+      modal?.classList.add('active');
+      backdrop?.setAttribute('aria-hidden', 'false');
+      modal?.setAttribute('aria-hidden', 'false');
+
+      const firstCard = modal?.querySelector('.layout-card') as HTMLElement;
+      firstCard?.focus();
+
+      document.body.style.overflow = 'hidden';
+    }
+
+    closeModal() {
+      const backdrop = document.getElementById('layout-selector-backdrop');
+      const modal = document.getElementById('layout-selector-modal');
+
+      backdrop?.classList.remove('active');
+      modal?.classList.remove('active');
+      backdrop?.setAttribute('aria-hidden', 'true');
+      modal?.setAttribute('aria-hidden', 'true');
+
+      if (this.previewLayout) {
+        this.applyLayout(this.currentLayout);
+        this.previewLayout = null;
+      }
+
+      document.body.style.overflow = '';
+
+      const triggerBtn = document.getElementById('layout-palette-btn');
+      triggerBtn?.focus();
+    }
+  }
+
+  const layoutManager = new LayoutManager();
+  (window as any).openLayoutSelector = () => layoutManager.openModal();
+</script>

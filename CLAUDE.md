@@ -5,6 +5,8 @@ Auto-generated from all feature plans. Last updated: 2025-11-26
 ## Active Technologies
 - TypeScript 5.3+ + js-yaml (YAML 파싱), ajv (JSON Schema 검증), vite (빌드) (001-animflow-dsl-engine)
 - N/A (클라이언트 사이드 전용, 브라우저 메모리) (001-animflow-dsl-engine)
+- TypeScript 5.3+, Astro 4.x+ + Astro, @astrojs/mdx, @astrojs/react, @animflow/core, Zod (002-blog-platform)
+- File-based (MDX content collections, no database) (002-blog-platform)
 
 [EXTRACTED FROM ALL PLAN.MD FILES]
 
@@ -23,6 +25,7 @@ Auto-generated from all feature plans. Last updated: 2025-11-26
 [LANGUAGE-SPECIFIC, ONLY FOR LANGUAGES IN USE]
 
 ## Recent Changes
+- 002-blog-platform: Added TypeScript 5.3+, Astro 4.x+ + Astro, @astrojs/mdx, @astrojs/react, @animflow/core, Zod
 - 001-animflow-dsl-engine: Added TypeScript 5.3+ + js-yaml (YAML 파싱), ajv (JSON Schema 검증), vite (빌드)
 
 [LAST 3 FEATURES AND WHAT THEY ADDED]
@@ -45,6 +48,7 @@ This is a tech blog project focused on creating dynamic, animated flow diagrams 
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
+
 
 
 

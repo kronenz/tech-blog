@@ -1,0 +1,323 @@
+---
+import { themePresets } from '../config';
+---
+
+<div class="theme-switcher">
+  <div class="theme-section">
+    <h3 class="section-title">Color Mode</h3>
+    <div class="mode-toggle">
+      <button class="mode-btn" data-mode="light" aria-label="Light mode">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <span>Light</span>
+      </button>
+      <button class="mode-btn" data-mode="dark" aria-label="Dark mode">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span>Dark</span>
+      </button>
+      <button class="mode-btn" data-mode="system" aria-label="System preference">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span>System</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="theme-section">
+    <h3 class="section-title">Style Preset</h3>
+    <div class="preset-grid">
+      {themePresets.map((preset) => (
+        <button
+          class="preset-card"
+          data-preset={preset.id}
+          aria-label={`${preset.name} theme`}
+        >
+          <div class="preset-preview" style={`background: ${preset.preview.bg};`}>
+            <div class="preview-header" style={`background: ${preset.preview.primary};`}></div>
+            <div class="preview-content">
+              <div class="preview-text" style={`background: ${preset.preview.text}; opacity: 0.8;`}></div>
+              <div class="preview-text short" style={`background: ${preset.preview.text}; opacity: 0.5;`}></div>
+              <div class="preview-accent" style={`background: ${preset.preview.accent};`}></div>
+            </div>
+          </div>
+          <div class="preset-info">
+            <span class="preset-name">{preset.name}</span>
+            <span class="preset-desc">{preset.description}</span>
+          </div>
+          <div class="preset-check">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
+
+<style>
+  .theme-switcher {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+  }
+
+  .theme-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+
+  .section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  /* Mode Toggle */
+  .mode-toggle {
+    display: flex;
+    gap: var(--spacing-sm);
+    background: var(--color-bg-secondary);
+    padding: var(--spacing-xs);
+    border-radius: var(--radius-md);
+  }
+
+  .mode-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .mode-btn:hover {
+    color: var(--color-text);
+    background: var(--color-bg);
+  }
+
+  .mode-btn.active {
+    background: var(--color-bg);
+    color: var(--color-primary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Preset Grid */
+  .preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--spacing-md);
+  }
+
+  .preset-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: left;
+    padding: 0;
+  }
+
+  .preset-card:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .preset-card.active {
+    border-color: var(--color-primary);
+  }
+
+  .preset-preview {
+    height: 80px;
+    padding: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  .preview-header {
+    height: 8px;
+    border-radius: 2px;
+    width: 100%;
+  }
+
+  .preview-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 4px;
+  }
+
+  .preview-text {
+    height: 6px;
+    border-radius: 2px;
+    width: 80%;
+  }
+
+  .preview-text.short {
+    width: 50%;
+  }
+
+  .preview-accent {
+    height: 6px;
+    border-radius: 2px;
+    width: 30%;
+    margin-top: auto;
+  }
+
+  .preset-info {
+    padding: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .preset-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .preset-desc {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+  }
+
+  .preset-check {
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: white;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .preset-card.active .preset-check {
+    display: flex;
+  }
+
+  @media (max-width: 480px) {
+    .mode-btn span {
+      display: none;
+    }
+
+    .preset-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
+
+<script>
+  function initThemeSwitcher() {
+    const modeButtons = document.querySelectorAll('.mode-btn');
+    const presetCards = document.querySelectorAll('.preset-card');
+
+    // Get current settings
+    const currentMode = localStorage.getItem('theme') || 'system';
+    const currentPreset = localStorage.getItem('theme-preset') || 'default';
+
+    // Set initial active states
+    modeButtons.forEach((btn) => {
+      if (btn.getAttribute('data-mode') === currentMode) {
+        btn.classList.add('active');
+      }
+    });
+
+    presetCards.forEach((card) => {
+      if (card.getAttribute('data-preset') === currentPreset) {
+        card.classList.add('active');
+      }
+    });
+
+    // Mode button handlers
+    modeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-mode');
+        if (!mode) return;
+
+        // Update UI
+        modeButtons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Save and apply
+        localStorage.setItem('theme', mode);
+        applyTheme(mode);
+      });
+    });
+
+    // Preset card handlers
+    presetCards.forEach((card) => {
+      card.addEventListener('click', () => {
+        const preset = card.getAttribute('data-preset');
+        if (!preset) return;
+
+        // Update UI
+        presetCards.forEach((c) => c.classList.remove('active'));
+        card.classList.add('active');
+
+        // Save and apply
+        localStorage.setItem('theme-preset', preset);
+        applyPreset(preset);
+      });
+    });
+
+    function applyTheme(mode: string) {
+      const root = document.documentElement;
+      if (mode === 'system') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      } else {
+        root.setAttribute('data-theme', mode);
+      }
+    }
+
+    function applyPreset(preset: string) {
+      const root = document.documentElement;
+      if (preset === 'default') {
+        root.removeAttribute('data-preset');
+      } else {
+        root.setAttribute('data-preset', preset);
+      }
+    }
+  }
+
+  // Run on page load and after Astro page transitions
+  initThemeSwitcher();
+  document.addEventListener('astro:after-swap', initThemeSwitcher);
+</script>

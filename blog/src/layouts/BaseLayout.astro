@@ -1,0 +1,87 @@
+---
+import { siteConfig } from '../config';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  article?: boolean;
+}
+
+const { title, description, image, article = false } = Astro.props;
+const pageTitle = title ? `${title} | ${siteConfig.title}` : siteConfig.title;
+const pageDescription = description || siteConfig.description;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImage = image || '/og-default.png';
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={pageDescription} />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="canonical" href={canonicalURL} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Open Graph / Social -->
+    <meta property="og:type" content={article ? 'article' : 'website'} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:image" content={new URL(ogImage, Astro.site)} />
+    <meta property="og:site_name" content={siteConfig.title} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:image" content={new URL(ogImage, Astro.site)} />
+
+    <title>{pageTitle}</title>
+    <script is:inline>
+      // Theme and Layout initialization (runs before page renders to prevent flash)
+      (function() {
+        const theme = localStorage.getItem('theme') || 'system';
+        const preset = localStorage.getItem('theme-preset') || 'default';
+        const layout = localStorage.getItem('preferred-layout') || 'default';
+
+        // Apply theme mode
+        if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+
+        // Apply theme preset
+        if (preset && preset !== 'default') {
+          document.documentElement.setAttribute('data-preset', preset);
+        }
+
+        // Apply layout preset
+        if (layout && layout !== 'default') {
+          document.documentElement.setAttribute('data-layout', layout);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <Header />
+    <main class="container">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
+
+<style>
+  main {
+    padding-top: var(--spacing-xl);
+    padding-bottom: var(--spacing-2xl);
+    min-height: calc(100vh - var(--header-height) - 100px);
+  }
+</style>

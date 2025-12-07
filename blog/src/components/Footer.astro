@@ -1,0 +1,62 @@
+---
+import { siteConfig } from '../config';
+---
+
+<footer class="footer">
+  <div class="footer-content container">
+    <p>&copy; {new Date().getFullYear()} {siteConfig.author.name}. All rights reserved.</p>
+    <div class="social-links">
+      {siteConfig.author.social.github && (
+        <a href={siteConfig.author.social.github} target="_blank" rel="noopener noreferrer">
+          GitHub
+        </a>
+      )}
+      {siteConfig.author.social.twitter && (
+        <a href={siteConfig.author.social.twitter} target="_blank" rel="noopener noreferrer">
+          Twitter
+        </a>
+      )}
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background-color: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border);
+    padding: var(--spacing-xl) 0;
+    margin-top: auto;
+    transition: background-color var(--transition-normal);
+  }
+
+  .footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+  }
+
+  .footer p {
+    color: var(--color-text-secondary);
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  .social-links {
+    display: flex;
+    gap: var(--spacing-md);
+  }
+
+  .social-links a {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 480px) {
+    .footer-content {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+</style>

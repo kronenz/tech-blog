@@ -1,0 +1,652 @@
+---
+// Theme Selector Component
+// Grid-based theme picker with live preview
+
+interface Theme {
+  id: string;
+  name: string;
+  description: string;
+  colors: {
+    light: { bg: string; text: string; primary: string; accent: string };
+    dark: { bg: string; text: string; primary: string; accent: string };
+  };
+}
+
+const themes: Theme[] = [
+  {
+    id: 'default',
+    name: 'Classic',
+    description: '깔끔하고 전문적인 기본 테마',
+    colors: {
+      light: { bg: '#ffffff', text: '#1a1a2e', primary: '#0066cc', accent: '#ff6b6b' },
+      dark: { bg: '#1a1a2e', text: '#e8e8e8', primary: '#4dabf7', accent: '#ff6b6b' }
+    }
+  },
+  {
+    id: 'sepia',
+    name: 'Sepia',
+    description: '따뜻하고 편안한 세피아 톤',
+    colors: {
+      light: { bg: '#f4ecd8', text: '#5c4b37', primary: '#8b4513', accent: '#cd853f' },
+      dark: { bg: '#3d3428', text: '#e8dcc8', primary: '#cd853f', accent: '#daa06d' }
+    }
+  },
+  {
+    id: 'nord',
+    name: 'Nord',
+    description: '북유럽 스타일의 차분한 블루',
+    colors: {
+      light: { bg: '#eceff4', text: '#2e3440', primary: '#5e81ac', accent: '#88c0d0' },
+      dark: { bg: '#2e3440', text: '#eceff4', primary: '#88c0d0', accent: '#8fbcbb' }
+    }
+  },
+  {
+    id: 'dracula',
+    name: 'Dracula',
+    description: '개발자를 위한 다크 퍼플',
+    colors: {
+      light: { bg: '#f8f8f2', text: '#282a36', primary: '#bd93f9', accent: '#ff79c6' },
+      dark: { bg: '#282a36', text: '#f8f8f2', primary: '#bd93f9', accent: '#ff79c6' }
+    }
+  },
+  {
+    id: 'solarized',
+    name: 'Solarized',
+    description: '정교하게 설계된 컬러 시스템',
+    colors: {
+      light: { bg: '#fdf6e3', text: '#657b83', primary: '#268bd2', accent: '#cb4b16' },
+      dark: { bg: '#002b36', text: '#839496', primary: '#268bd2', accent: '#cb4b16' }
+    }
+  },
+  {
+    id: 'high-contrast',
+    name: 'High Contrast',
+    description: '최대 가독성을 위한 고대비',
+    colors: {
+      light: { bg: '#ffffff', text: '#000000', primary: '#0000cc', accent: '#cc0000' },
+      dark: { bg: '#000000', text: '#ffffff', primary: '#00ff00', accent: '#ffff00' }
+    }
+  },
+  {
+    id: 'neon',
+    name: 'Neon',
+    description: '사이버펑크 네온 스타일',
+    colors: {
+      light: { bg: '#ffffff', text: '#1a1a2e', primary: '#8b5cf6', accent: '#ec4899' },
+      dark: { bg: '#0a0a0f', text: '#e0e0ff', primary: '#00ffff', accent: '#ff00ff' }
+    }
+  },
+  {
+    id: 'minimal',
+    name: 'Minimal',
+    description: '심플하고 집중하기 좋은 미니멀',
+    colors: {
+      light: { bg: '#fafafa', text: '#333333', primary: '#555555', accent: '#888888' },
+      dark: { bg: '#1a1a1a', text: '#d0d0d0', primary: '#aaaaaa', accent: '#777777' }
+    }
+  },
+  {
+    id: 'forest',
+    name: 'Forest',
+    description: '자연에서 영감받은 그린 톤',
+    colors: {
+      light: { bg: '#f5f9f5', text: '#2d3b2d', primary: '#2e7d32', accent: '#8bc34a' },
+      dark: { bg: '#1a2418', text: '#d0e0d0', primary: '#66bb6a', accent: '#aed581' }
+    }
+  },
+  {
+    id: 'ocean',
+    name: 'Ocean',
+    description: '평화로운 바다 블루 테마',
+    colors: {
+      light: { bg: '#f0f8ff', text: '#1a3a5c', primary: '#0288d1', accent: '#4fc3f7' },
+      dark: { bg: '#0a1628', text: '#c8e0f8', primary: '#4fc3f7', accent: '#00bcd4' }
+    }
+  }
+];
+---
+
+<div class="theme-selector-backdrop" id="theme-selector-backdrop" aria-hidden="true"></div>
+
+<div
+  class="theme-selector-modal"
+  id="theme-selector-modal"
+  role="dialog"
+  aria-labelledby="theme-selector-title"
+  aria-modal="true"
+  aria-hidden="true"
+>
+  <div class="theme-selector-header">
+    <h2 id="theme-selector-title">테마 선택</h2>
+    <button
+      class="theme-selector-close"
+      id="theme-selector-close"
+      aria-label="테마 선택 닫기"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <div class="theme-grid" role="radiogroup" aria-label="테마 목록">
+    {themes.map((theme) => (
+      <button
+        class="theme-card"
+        data-theme-id={theme.id}
+        role="radio"
+        aria-checked="false"
+        aria-label={`${theme.name} 테마 - ${theme.description}`}
+      >
+        <div class="theme-preview">
+          <div class="preview-row preview-light">
+            <span class="preview-swatch" style={`background-color: ${theme.colors.light.bg}`}></span>
+            <span class="preview-swatch" style={`background-color: ${theme.colors.light.text}`}></span>
+            <span class="preview-swatch" style={`background-color: ${theme.colors.light.primary}`}></span>
+            <span class="preview-swatch" style={`background-color: ${theme.colors.light.accent}`}></span>
+          </div>
+          <div class="preview-row preview-dark">
+            <span class="preview-swatch" style={`background-color: ${theme.colors.dark.bg}`}></span>
+            <span class="preview-swatch" style={`background-color: ${theme.colors.dark.text}`}></span>
+            <span class="preview-swatch" style={`background-color: ${theme.colors.dark.primary}`}></span>
+            <span class="preview-swatch" style={`background-color: ${theme.colors.dark.accent}`}></span>
+          </div>
+        </div>
+        <div class="theme-info">
+          <h3 class="theme-name">{theme.name}</h3>
+          <p class="theme-description">{theme.description}</p>
+        </div>
+        <div class="theme-mode-toggle">
+          <button
+            class="mode-btn mode-light"
+            data-mode="light"
+            aria-label="라이트 모드"
+            title="라이트 모드"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+          </button>
+          <button
+            class="mode-btn mode-dark"
+            data-mode="dark"
+            aria-label="다크 모드"
+            title="다크 모드"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="theme-active-indicator" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+      </button>
+    ))}
+  </div>
+
+  <!-- Accessibility: Live region for theme change announcements -->
+  <div id="theme-announcement" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+</div>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .theme-selector-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-normal), visibility var(--transition-normal);
+  }
+
+  .theme-selector-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .theme-selector-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    max-width: 900px;
+    width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-normal), visibility var(--transition-normal), transform var(--transition-normal);
+  }
+
+  .theme-selector-modal.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .theme-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .theme-selector-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--color-text);
+  }
+
+  .theme-selector-close {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .theme-selector-close:hover {
+    color: var(--color-text);
+    background-color: var(--color-bg-secondary);
+  }
+
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+  }
+
+  @media (max-width: 768px) {
+    .theme-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .theme-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .theme-card {
+    position: relative;
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    cursor: pointer;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .theme-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .theme-card:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .theme-card[aria-checked="true"] {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg-secondary));
+  }
+
+  .theme-card[aria-checked="true"] .theme-active-indicator {
+    display: flex;
+  }
+
+  .theme-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .preview-row {
+    display: flex;
+    height: 24px;
+  }
+
+  .preview-swatch {
+    flex: 1;
+    border: 1px solid var(--color-border);
+  }
+
+  .preview-row:first-child .preview-swatch:first-child {
+    border-top-left-radius: var(--radius-sm);
+  }
+
+  .preview-row:first-child .preview-swatch:last-child {
+    border-top-right-radius: var(--radius-sm);
+  }
+
+  .preview-row:last-child .preview-swatch:first-child {
+    border-bottom-left-radius: var(--radius-sm);
+  }
+
+  .preview-row:last-child .preview-swatch:last-child {
+    border-bottom-right-radius: var(--radius-sm);
+  }
+
+  .theme-info {
+    flex: 1;
+  }
+
+  .theme-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0 0 var(--spacing-xs) 0;
+  }
+
+  .theme-description {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .theme-mode-toggle {
+    display: flex;
+    gap: var(--spacing-xs);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .mode-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xs);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .mode-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .mode-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+
+  .theme-active-indicator {
+    display: none;
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    width: 28px;
+    height: 28px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .theme-selector-backdrop,
+    .theme-selector-modal,
+    .theme-card,
+    .mode-btn {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  class ThemeManager {
+    private currentPreset: string;
+    private currentMode: 'light' | 'dark';
+    private previewPreset: string | null = null;
+    private previewMode: 'light' | 'dark' | null = null;
+
+    constructor() {
+      this.currentPreset = localStorage.getItem('theme-preset') || 'default';
+      this.currentMode = (localStorage.getItem('theme-mode') as 'light' | 'dark') || this.getSystemPreference();
+      this.init();
+    }
+
+    private getSystemPreference(): 'light' | 'dark' {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    private init() {
+      this.setupEventListeners();
+      this.updateUI();
+    }
+
+    private setupEventListeners() {
+      const backdrop = document.getElementById('theme-selector-backdrop');
+      const modal = document.getElementById('theme-selector-modal');
+      const closeBtn = document.getElementById('theme-selector-close');
+      const cards = document.querySelectorAll('.theme-card');
+
+      // Close modal events
+      backdrop?.addEventListener('click', () => this.closeModal());
+      closeBtn?.addEventListener('click', () => this.closeModal());
+
+      // ESC key to close
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal?.classList.contains('active')) {
+          this.closeModal();
+        }
+      });
+
+      // Theme card interactions
+      cards.forEach((card) => {
+        const themeId = (card as HTMLElement).dataset.themeId;
+        if (!themeId) return;
+
+        // Hover preview
+        card.addEventListener('mouseenter', () => {
+          this.previewTheme(themeId, this.currentMode);
+        });
+
+        card.addEventListener('mouseleave', () => {
+          this.revertPreview();
+        });
+
+        // Click to select theme
+        card.addEventListener('click', (e) => {
+          const target = e.target as HTMLElement;
+          // Don't select theme if clicking mode toggle buttons
+          if (target.closest('.mode-btn')) return;
+
+          this.selectTheme(themeId);
+        });
+
+        // Mode toggle buttons
+        const modeButtons = card.querySelectorAll('.mode-btn');
+        modeButtons.forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const mode = (btn as HTMLElement).dataset.mode as 'light' | 'dark';
+            this.selectTheme(themeId, mode);
+          });
+        });
+      });
+
+      // Keyboard navigation
+      modal?.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          this.navigateCards(1);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.navigateCards(-1);
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const focused = document.activeElement as HTMLElement;
+          if (focused?.classList.contains('theme-card')) {
+            const themeId = focused.dataset.themeId;
+            if (themeId) this.selectTheme(themeId);
+          }
+        }
+      });
+    }
+
+    private navigateCards(direction: number) {
+      const cards = Array.from(document.querySelectorAll('.theme-card')) as HTMLElement[];
+      const currentIndex = cards.findIndex((card) => card === document.activeElement);
+      let nextIndex = currentIndex + direction;
+
+      if (nextIndex < 0) nextIndex = cards.length - 1;
+      if (nextIndex >= cards.length) nextIndex = 0;
+
+      cards[nextIndex]?.focus();
+    }
+
+    previewTheme(preset: string, mode: 'light' | 'dark') {
+      this.previewPreset = preset;
+      this.previewMode = mode;
+      document.documentElement.setAttribute('data-preset', preset);
+      document.documentElement.setAttribute('data-theme', mode);
+    }
+
+    revertPreview() {
+      if (this.previewPreset !== null) {
+        document.documentElement.setAttribute('data-preset', this.currentPreset);
+        document.documentElement.setAttribute('data-theme', this.currentMode);
+        this.previewPreset = null;
+        this.previewMode = null;
+      }
+    }
+
+    selectTheme(preset: string, mode?: 'light' | 'dark') {
+      this.currentPreset = preset;
+      if (mode) this.currentMode = mode;
+
+      document.documentElement.setAttribute('data-preset', preset);
+      document.documentElement.setAttribute('data-theme', this.currentMode);
+
+      localStorage.setItem('theme-preset', preset);
+      localStorage.setItem('theme-mode', this.currentMode);
+
+      this.previewPreset = null;
+      this.previewMode = null;
+
+      this.updateUI();
+      this.announceChange(preset, this.currentMode);
+    }
+
+    private updateUI() {
+      // Update active states on cards
+      const cards = document.querySelectorAll('.theme-card');
+      cards.forEach((card) => {
+        const themeId = (card as HTMLElement).dataset.themeId;
+        const isActive = themeId === this.currentPreset;
+        card.setAttribute('aria-checked', isActive.toString());
+
+        // Update mode buttons
+        const modeButtons = card.querySelectorAll('.mode-btn');
+        modeButtons.forEach((btn) => {
+          const mode = (btn as HTMLElement).dataset.mode;
+          btn.classList.toggle('active', isActive && mode === this.currentMode);
+        });
+      });
+    }
+
+    private announceChange(preset: string, mode: string) {
+      const announcement = document.getElementById('theme-announcement');
+      if (announcement) {
+        const themeName = document.querySelector(`[data-theme-id="${preset}"] .theme-name`)?.textContent || preset;
+        const modeText = mode === 'dark' ? '다크' : '라이트';
+        announcement.textContent = `${themeName} 테마 ${modeText} 모드로 변경되었습니다`;
+      }
+    }
+
+    openModal() {
+      const backdrop = document.getElementById('theme-selector-backdrop');
+      const modal = document.getElementById('theme-selector-modal');
+
+      backdrop?.classList.add('active');
+      modal?.classList.add('active');
+      backdrop?.setAttribute('aria-hidden', 'false');
+      modal?.setAttribute('aria-hidden', 'false');
+
+      // Focus first theme card
+      const firstCard = modal?.querySelector('.theme-card') as HTMLElement;
+      firstCard?.focus();
+
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
+    }
+
+    closeModal() {
+      const backdrop = document.getElementById('theme-selector-backdrop');
+      const modal = document.getElementById('theme-selector-modal');
+
+      backdrop?.classList.remove('active');
+      modal?.classList.remove('active');
+      backdrop?.setAttribute('aria-hidden', 'true');
+      modal?.setAttribute('aria-hidden', 'true');
+
+      // Revert any preview
+      this.revertPreview();
+
+      // Restore body scroll
+      document.body.style.overflow = '';
+
+      // Return focus to trigger button
+      const triggerBtn = document.getElementById('theme-palette-btn');
+      triggerBtn?.focus();
+    }
+  }
+
+  // Initialize theme manager
+  const themeManager = new ThemeManager();
+
+  // Expose openModal globally for the trigger button
+  (window as any).openThemeSelector = () => themeManager.openModal();
+</script>
