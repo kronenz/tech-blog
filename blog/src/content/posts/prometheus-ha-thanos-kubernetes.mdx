@@ -230,9 +230,80 @@ stringData:
       secret_key: ${AWS_SECRET_KEY}
 ```
 
-### 2. Prometheus with Sidecar (StatefulSet)
+### 2. Headless Service 정의
+
+DNS SRV 디스커버리를 위해 Headless Service가 필요합니다.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  clusterIP: None
+  selector:
+    app: prometheus
+  ports:
+    - name: web
+      port: 9090
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-sidecar
+  namespace: monitoring
+spec:
+  clusterIP: None
+  selector:
+    thanos-store-api: "true"
+  ports:
+    - name: grpc
+      port: 10901
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-store
+  namespace: monitoring
+spec:
+  clusterIP: None
+  selector:
+    app: thanos-store
+  ports:
+    - name: grpc
+      port: 10901
+```
+
+### 3. Prometheus ConfigMap
+
+Prometheus 설정에서 `external_labels`를 통해 replica 식별자를 추가합니다.
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      external_labels:
+        cluster: production
+        prometheus_replica: $(POD_NAME)
+
+    scrape_configs:
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+```
+
+### 4. Prometheus with Sidecar (StatefulSet)
 
 HA 구성을 위해 최소 2개의 Prometheus replica를 배포합니다.
+
+> **주의**: `retention.time=6h`는 Sidecar가 정상적으로 블록을 업로드한다는 가정 하에 설정됩니다. Sidecar 장애 시 데이터 손실 위험이 있으므로, 프로덕션 환경에서는 **12h 이상**을 권장합니다.
 
 ```yaml
 apiVersion: apps/v1
@@ -309,7 +380,7 @@ spec:
             storage: 50Gi
 ```
 
-### 3. Thanos Query (Deployment)
+### 5. Thanos Query (Deployment)
 
 ```yaml
 apiVersion: apps/v1
@@ -344,7 +415,7 @@ spec:
               name: grpc
 ```
 
-### 4. Store Gateway (StatefulSet)
+### 6. Store Gateway (StatefulSet)
 
 ```yaml
 apiVersion: apps/v1
@@ -397,7 +468,7 @@ spec:
             storage: 20Gi
 ```
 
-### 5. Compactor (Singleton)
+### 7. Compactor (Singleton)
 
 Compactor는 반드시 **단일 인스턴스**로 실행해야 합니다.
 
@@ -668,6 +739,8 @@ args:
   - --query.partial-response    # 일부 Store 실패 시에도 응답
 ```
 
+> **`--query.partial-response` 트레이드오프**: 이 옵션은 일부 Store가 응답하지 않아도 부분 결과를 반환합니다. **가용성 vs 일관성** 트레이드오프입니다. 데이터 정확성이 중요한 경우 비활성화하고, 가용성이 우선인 경우 활성화하세요.
+
 ### 3. Store Gateway 캐싱
 
 ```yaml
@@ -698,6 +771,36 @@ groups:
           severity: critical
         annotations:
           summary: "Thanos Compactor has halted"
+
+      - alert: ThanosCompactMultipleRunning
+        expr: sum(up{job=~".*thanos-compact.*"}) > 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Multiple Thanos Compactors running - data corruption risk"
+
+      - alert: ThanosQueryGrpcErrorRate
+        expr: |
+          rate(grpc_server_handled_total{job=~".*thanos-query.*", grpc_code!="OK"}[5m])
+          / rate(grpc_server_handled_total{job=~".*thanos-query.*"}[5m])
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Thanos Query gRPC error rate > 5%"
+
+      - alert: ThanosStoreGrpcErrorRate
+        expr: |
+          rate(grpc_server_handled_total{job=~".*thanos-store.*", grpc_code!="OK"}[5m])
+          / rate(grpc_server_handled_total{job=~".*thanos-store.*"}[5m])
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Thanos Store Gateway gRPC error rate > 5%"
 ```
 
 ## 멀티 클러스터 구성
