@@ -1,0 +1,553 @@
+/**
+ * Editor Styles - AI-Powered Markdown Editor
+ */
+
+/* ============================================================================
+   Layout
+   ============================================================================ */
+
+.editor-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.markdown-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--editor-bg, #ffffff);
+}
+
+.editor-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ============================================================================
+   Toolbar
+   ============================================================================ */
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--editor-border, #e5e7eb);
+  background-color: var(--editor-toolbar-bg, #f9fafb);
+  min-height: 48px;
+}
+
+.toolbar-left,
+.toolbar-center,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toolbar-center {
+  flex: 1;
+  justify-content: center;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--editor-text, #374151);
+  background-color: transparent;
+  border: 1px solid var(--editor-border, #e5e7eb);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toolbar-btn:hover {
+  background-color: var(--editor-hover, #f3f4f6);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.primary {
+  color: #ffffff;
+  background-color: var(--editor-primary, #3b82f6);
+  border-color: var(--editor-primary, #3b82f6);
+}
+
+.toolbar-btn.primary:hover {
+  background-color: var(--editor-primary-hover, #2563eb);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: var(--editor-border, #e5e7eb);
+  margin: 0 0.25rem;
+}
+
+.save-status {
+  font-size: 0.75rem;
+  color: var(--editor-text-secondary, #6b7280);
+}
+
+.toolbar-btn-ai {
+  background-color: var(--editor-ai-bg, #f0fdf4);
+  border-color: var(--editor-ai-border, #86efac);
+  color: var(--editor-ai-text, #166534);
+}
+
+.toolbar-btn-ai:hover {
+  background-color: var(--editor-ai-hover, #dcfce7);
+}
+
+.api-key-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  background-color: var(--editor-warning-bg, #fef3c7);
+  color: var(--editor-warning-text, #92400e);
+  border-radius: 50%;
+}
+
+/* ============================================================================
+   Split View
+   ============================================================================ */
+
+.editor-panel,
+.preview-panel {
+  flex: 1;
+  overflow: auto;
+  height: 100%;
+}
+
+.editor-panel {
+  border-right: 1px solid var(--editor-border, #e5e7eb);
+}
+
+.preview-panel {
+  padding: 1.5rem;
+  background-color: var(--editor-preview-bg, #ffffff);
+}
+
+/* ============================================================================
+   CodeMirror Customization
+   ============================================================================ */
+
+.editor-panel .cm-editor {
+  height: 100%;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+
+.editor-panel .cm-scroller {
+  overflow: auto;
+}
+
+.editor-panel .cm-content {
+  padding: 1rem;
+}
+
+.editor-panel .cm-line {
+  padding: 0 0.5rem;
+}
+
+/* ============================================================================
+   Preview Panel
+   ============================================================================ */
+
+.preview-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.preview-content h1,
+.preview-content h2,
+.preview-content h3,
+.preview-content h4,
+.preview-content h5,
+.preview-content h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  color: var(--editor-heading, #111827);
+}
+
+.preview-content h1 { font-size: 2rem; }
+.preview-content h2 { font-size: 1.5rem; }
+.preview-content h3 { font-size: 1.25rem; }
+
+.preview-content p {
+  margin-bottom: 1em;
+  line-height: 1.75;
+  color: var(--editor-text, #374151);
+}
+
+.preview-content code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.875em;
+  padding: 0.2em 0.4em;
+  background-color: var(--editor-code-bg, #f3f4f6);
+  border-radius: 0.25rem;
+}
+
+.preview-content pre {
+  margin: 1em 0;
+  padding: 1rem;
+  background-color: var(--editor-code-bg, #1f2937);
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.preview-content pre code {
+  padding: 0;
+  background-color: transparent;
+  color: var(--editor-code-text, #e5e7eb);
+}
+
+.preview-content blockquote {
+  margin: 1em 0;
+  padding: 0.5rem 1rem;
+  border-left: 4px solid var(--editor-primary, #3b82f6);
+  background-color: var(--editor-blockquote-bg, #f9fafb);
+  color: var(--editor-text-secondary, #6b7280);
+}
+
+.preview-content ul,
+.preview-content ol {
+  margin: 1em 0;
+  padding-left: 1.5em;
+}
+
+.preview-content li {
+  margin-bottom: 0.5em;
+  line-height: 1.75;
+}
+
+.preview-content a {
+  color: var(--editor-link, #3b82f6);
+  text-decoration: none;
+}
+
+.preview-content a:hover {
+  text-decoration: underline;
+}
+
+.preview-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+.preview-content table {
+  width: 100%;
+  margin: 1em 0;
+  border-collapse: collapse;
+}
+
+.preview-content th,
+.preview-content td {
+  padding: 0.75rem;
+  border: 1px solid var(--editor-border, #e5e7eb);
+  text-align: left;
+}
+
+.preview-content th {
+  background-color: var(--editor-table-header, #f9fafb);
+  font-weight: 600;
+}
+
+/* ============================================================================
+   AnimFlow Preview
+   ============================================================================ */
+
+.animflow-preview {
+  margin: 1.5rem 0;
+  border: 1px solid var(--editor-border, #e5e7eb);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.animflow-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background-color: var(--editor-toolbar-bg, #f9fafb);
+  border-bottom: 1px solid var(--editor-border, #e5e7eb);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.animflow-preview-error {
+  padding: 1rem;
+  background-color: var(--editor-error-bg, #fef2f2);
+  color: var(--editor-error-text, #991b1b);
+  font-size: 0.875rem;
+}
+
+/* ============================================================================
+   Settings Modal
+   ============================================================================ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--editor-bg, #ffffff);
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--editor-border, #e5e7eb);
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--editor-heading, #111827);
+}
+
+.modal-close {
+  padding: 0.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--editor-text-secondary, #6b7280);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--editor-text, #374151);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--editor-border, #e5e7eb);
+  border-radius: 0.375rem;
+  background-color: var(--editor-bg, #ffffff);
+  color: var(--editor-text, #374151);
+  transition: border-color 0.15s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--editor-primary, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-hint {
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--editor-text-secondary, #6b7280);
+}
+
+.form-error {
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--editor-error-text, #dc2626);
+}
+
+/* ============================================================================
+   AI Components
+   ============================================================================ */
+
+.ai-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 400px;
+  background-color: var(--editor-bg, #ffffff);
+  border-left: 1px solid var(--editor-border, #e5e7eb);
+  box-shadow: -4px 0 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid var(--editor-border, #e5e7eb);
+}
+
+.ai-panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--editor-heading, #111827);
+}
+
+.ai-panel-body {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.ai-panel-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--editor-border, #e5e7eb);
+}
+
+.ai-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1rem;
+}
+
+.ai-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--editor-border, #e5e7eb);
+  border-top-color: var(--editor-primary, #3b82f6);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   Tags
+   ============================================================================ */
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: var(--editor-tag-bg, #e0f2fe);
+  color: var(--editor-tag-text, #0369a1);
+  border-radius: 9999px;
+}
+
+.tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.tag-remove:hover {
+  opacity: 1;
+}
+
+/* ============================================================================
+   Dark Mode
+   ============================================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --editor-bg: #1f2937;
+    --editor-preview-bg: #111827;
+    --editor-toolbar-bg: #374151;
+    --editor-border: #4b5563;
+    --editor-text: #e5e7eb;
+    --editor-text-secondary: #9ca3af;
+    --editor-heading: #f9fafb;
+    --editor-hover: #374151;
+    --editor-code-bg: #111827;
+    --editor-code-text: #e5e7eb;
+    --editor-blockquote-bg: #374151;
+    --editor-table-header: #374151;
+    --editor-link: #60a5fa;
+    --editor-primary: #3b82f6;
+    --editor-primary-hover: #2563eb;
+    --editor-error-bg: #450a0a;
+    --editor-error-text: #fca5a5;
+    --editor-tag-bg: #1e3a5f;
+    --editor-tag-text: #7dd3fc;
+  }
+}
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .editor-content {
+    flex-direction: column;
+  }
+
+  .editor-panel,
+  .preview-panel {
+    flex: none;
+    height: 50%;
+  }
+
+  .editor-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--editor-border, #e5e7eb);
+  }
+
+  .ai-panel {
+    width: 100%;
+  }
+
+  .toolbar-center {
+    display: none;
+  }
+}

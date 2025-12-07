@@ -1,0 +1,27 @@
+---
+/**
+ * AI-Powered Markdown Editor Page
+ * 전체 화면 레이아웃 사용
+ */
+// 정적 생성 (클라이언트 전용 페이지)
+export const prerender = true;
+
+import EditorLayout from '../layouts/EditorLayout.astro';
+import MarkdownEditor from '../components/editor/MarkdownEditor';
+import '../styles/editor.css';
+---
+
+<EditorLayout title="AI Markdown Editor" description="AI 기반 마크다운 편집기">
+  <div class="editor-page">
+    <MarkdownEditor client:only="react" />
+  </div>
+</EditorLayout>
+
+<style>
+  .editor-page {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+  }
+</style>
