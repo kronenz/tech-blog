@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build -w @animflow/core && npm run build -w blog",
-  "outputDirectory": "blog/.vercel/output",
+  "outputDirectory": "blog/dist",
   "installCommand": "npm install",
-  "framework": null,
+  "framework": "astro",
   "git": {
     "deploymentEnabled": {
       "002-blog-platform": true,
