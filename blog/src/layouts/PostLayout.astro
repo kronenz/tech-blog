@@ -1,6 +1,7 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import BaseLayout from './BaseLayout.astro';
+import { calculateReadingTime } from '../utils/readingTime';
 
 interface Props {
   post: CollectionEntry<'posts'>;
@@ -8,6 +9,7 @@ interface Props {
 
 const { post } = Astro.props;
 const { title, pubDate, updatedDate, description, tags } = post.data;
+const readingTime = calculateReadingTime(post.body);
 
 const formattedDate = pubDate.toLocaleDateString('ko-KR', {
   year: 'numeric',
@@ -28,6 +30,7 @@ const formattedUpdatedDate = updatedDate?.toLocaleDateString('ko-KR', {
       <h1 class="post-title">{title}</h1>
       <div class="post-meta">
         <time datetime={pubDate.toISOString()}>{formattedDate}</time>
+        <span class="reading-time">· {readingTime}</span>
         {updatedDate && (
           <span class="updated">
             (Updated: <time datetime={updatedDate.toISOString()}>{formattedUpdatedDate}</time>)
@@ -72,6 +75,10 @@ const formattedUpdatedDate = updatedDate?.toLocaleDateString('ko-KR', {
     color: var(--color-text-secondary);
     font-size: 0.875rem;
     margin-bottom: var(--spacing-md);
+  }
+
+  .reading-time {
+    margin-left: var(--spacing-xs);
   }
 
   .updated {

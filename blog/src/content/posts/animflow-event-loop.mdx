@@ -1,0 +1,151 @@
+---
+title: "JavaScript 이벤트 루프 완벽 이해"
+pubDate: 2025-12-04
+description: "AnimFlow를 활용하여 JavaScript의 이벤트 루프, 콜 스택, 태스크 큐의 동작을 시각적으로 이해합니다."
+tags: ["animflow", "javascript", "event-loop", "async"]
+draft: false
+---
+
+import AnimFlowEmbed from '../../components/AnimFlowEmbed.astro';
+
+# JavaScript 이벤트 루프
+
+JavaScript는 싱글 스레드 언어이지만, 이벤트 루프를 통해 비동기 작업을 효율적으로 처리합니다.
+
+## 핵심 구성 요소
+
+이벤트 루프의 주요 구성 요소들과 그들의 상호작용을 살펴봅시다.
+
+<AnimFlowEmbed
+  id="event-loop"
+  title="JavaScript Event Loop"
+  height={450}
+  yaml={`version: "1.0"
+nodes:
+  - id: callstack
+    type: box
+    label: Call Stack
+    position: { x: 100, y: 180 }
+  - id: webapi
+    type: box
+    label: Web APIs
+    position: { x: 350, y: 100 }
+  - id: taskqueue
+    type: database
+    label: Task Queue
+    position: { x: 350, y: 260 }
+  - id: eventloop
+    type: box
+    label: Event Loop
+    position: { x: 600, y: 180 }
+edges:
+  - id: e1
+    from: callstack
+    to: webapi
+    label: async call
+  - id: e2
+    from: webapi
+    to: taskqueue
+    label: callback
+  - id: e3
+    from: taskqueue
+    to: eventloop
+    label: dequeue
+  - id: e4
+    from: eventloop
+    to: callstack
+    label: push
+scenarios:
+  - id: setTimeout-flow
+    name: setTimeout 실행 흐름
+    steps:
+      - action: highlight
+        nodes: [callstack]
+        style:
+          color: "#3b82f6"
+        duration: 500
+      - action: animate-edge
+        edge: e1
+        label: "setTimeout(fn, 0)"
+        duration: 600
+      - action: highlight
+        nodes: [webapi]
+        style:
+          color: "#f59e0b"
+        duration: 1000
+      - action: animate-edge
+        edge: e2
+        label: "callback ready"
+        duration: 600
+      - action: highlight
+        nodes: [taskqueue]
+        style:
+          color: "#8b5cf6"
+        duration: 500
+      - action: animate-edge
+        edge: e3
+        label: "dequeue"
+        duration: 500
+      - action: highlight
+        nodes: [eventloop]
+        style:
+          color: "#10b981"
+        duration: 600
+      - action: animate-edge
+        edge: e4
+        label: "execute"
+        duration: 500
+      - action: highlight
+        nodes: [callstack]
+        style:
+          color: "#4ade80"
+        duration: 500`}
+/>
+
+## 실행 순서 이해하기
+
+다음 코드의 실행 순서를 예측해 보세요:
+
+```javascript
+console.log('1: Start');
+
+setTimeout(() => {
+  console.log('2: setTimeout');
+}, 0);
+
+Promise.resolve().then(() => {
+  console.log('3: Promise');
+});
+
+console.log('4: End');
+```
+
+**출력 순서:**
+1. `1: Start` - 동기 코드, 즉시 실행
+2. `4: End` - 동기 코드, 즉시 실행
+3. `3: Promise` - Microtask, 동기 코드 완료 후 우선 실행
+4. `2: setTimeout` - Task Queue, Microtask 이후 실행
+
+## Microtask vs Task
+
+| 구분 | Microtask Queue | Task Queue |
+|------|-----------------|------------|
+| 예시 | Promise.then, queueMicrotask | setTimeout, setInterval |
+| 우선순위 | 높음 | 낮음 |
+| 실행 시점 | 콜 스택 비면 즉시 | Microtask 완료 후 |
+
+## 주의사항
+
+```javascript
+// 무한 Microtask - 브라우저 블로킹!
+function infiniteMicrotask() {
+  Promise.resolve().then(infiniteMicrotask);
+}
+
+// Task는 브라우저 렌더링 허용
+function safeRecursion() {
+  setTimeout(safeRecursion, 0);
+}
+```
+
+Microtask가 계속 쌓이면 렌더링이 블로킹되므로 주의해야 합니다.

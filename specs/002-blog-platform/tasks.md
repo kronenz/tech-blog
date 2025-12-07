@@ -79,13 +79,13 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Create remark-animflow plugin to parse animflow code blocks in blog/src/plugins/remark-animflow.ts
-- [ ] T020 [US2] Register remark-animflow plugin in astro.config.mjs markdown config
-- [ ] T021 [US2] Create AnimFlowEmbed React component with client:only in blog/src/components/AnimFlowEmbed.tsx
-- [ ] T022 [US2] Create AnimFlowEmbed Astro wrapper component in blog/src/components/AnimFlowEmbed.astro
-- [ ] T023 [US2] Implement error boundary for AnimFlow parse errors in blog/src/components/AnimFlowError.tsx
-- [ ] T024 [US2] Create sample MDX post with AnimFlow diagram in blog/src/content/posts/animflow-demo.mdx
-- [ ] T025 [US2] Verify AnimFlow controls (play, pause, reset, speed) work in browser
+- [x] T019 [US2] Create remark-animflow plugin to parse animflow code blocks in blog/src/plugins/remark-animflow.ts
+- [x] T020 [US2] Register remark-animflow plugin in astro.config.mjs markdown config
+- [x] T021 [US2] Create AnimFlowEmbed React component with client:only in blog/src/components/AnimFlowEmbed.tsx
+- [x] T022 [US2] Create AnimFlowEmbed Astro wrapper component in blog/src/components/AnimFlowEmbed.astro
+- [x] T023 [US2] Implement error boundary for AnimFlow parse errors in blog/src/components/AnimFlowEmbed.tsx (inline error handling)
+- [x] T024 [US2] Create sample MDX post with AnimFlow diagram in blog/src/content/posts/animflow-demo.mdx
+- [x] T025 [US2] Verify AnimFlow controls (play, pause, reset, speed) work in browser
 
 **Checkpoint**: User Story 2 complete - AnimFlow diagrams render and animate in posts
 
@@ -99,12 +99,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Create PostCard component for post list in blog/src/components/PostCard.astro
-- [ ] T027 [US3] Create homepage with post list query in blog/src/pages/index.astro
-- [ ] T028 [US3] Implement date sorting (newest first) in homepage query
-- [ ] T029 [US3] Add reading time calculation utility in blog/src/utils/readingTime.ts
-- [ ] T030 [US3] Display post metadata (title, description, date, tags) in PostCard
-- [ ] T031 [US3] Verify post list links navigate to correct post pages
+- [x] T026 [US3] Create PostCard component for post list in blog/src/components/PostCard.astro
+- [x] T027 [US3] Create homepage with post list query in blog/src/pages/index.astro
+- [x] T028 [US3] Implement date sorting (newest first) in homepage query
+- [x] T029 [US3] Add reading time calculation utility in blog/src/utils/readingTime.ts
+- [x] T030 [US3] Display post metadata (title, description, date, tags) in PostCard
+- [x] T031 [US3] Verify post list links navigate to correct post pages
 
 **Checkpoint**: User Story 3 complete - Homepage shows post list with navigation
 
@@ -118,11 +118,11 @@
 
 ### Implementation for User Story 4
 
-- [ ] T032 [US4] Create tag utilities (getAllTags, getPostsByTag) in blog/src/utils/tags.ts
-- [ ] T033 [US4] Create TagList component in blog/src/components/TagList.astro
-- [ ] T034 [US4] Create dynamic tag page route in blog/src/pages/tags/[tag].astro
-- [ ] T035 [US4] Add tag count display to tag pages
-- [ ] T036 [US4] Add clickable tags to PostCard and PostLayout components
+- [x] T032 [US4] Create tag utilities (inline in tag pages) in blog/src/pages/tags/
+- [x] T033 [US4] Create TagList component in blog/src/pages/tags/index.astro
+- [x] T034 [US4] Create dynamic tag page route in blog/src/pages/tags/[tag].astro
+- [x] T035 [US4] Add tag count display to tag pages
+- [x] T036 [US4] Add clickable tags to PostCard and PostLayout components
 
 **Checkpoint**: User Story 4 complete - Tag filtering works across the site
 
@@ -136,12 +136,14 @@
 
 ### Implementation for User Story 5
 
-- [ ] T037 [US5] Add responsive CSS with mobile breakpoints in blog/src/styles/global.css
-- [ ] T038 [US5] Create theme CSS variables for light/dark modes in blog/src/styles/theme.css
-- [ ] T039 [US5] Create ThemeToggle component in blog/src/components/ThemeToggle.astro
-- [ ] T040 [US5] Implement theme persistence with localStorage in ThemeToggle
-- [ ] T041 [US5] Add system preference detection (prefers-color-scheme) for default theme
-- [ ] T042 [US5] Verify responsive layout on mobile (320px) to desktop (1920px) viewports
+- [x] T037 [US5] Add responsive CSS with mobile breakpoints in blog/src/styles/global.css
+- [x] T038 [US5] Create theme CSS variables for light/dark modes in blog/src/styles/global.css (10 theme presets)
+- [x] T039 [US5] Create ThemeToggle component in blog/src/components/ThemeToggle.astro
+- [x] T040 [US5] Implement theme persistence with localStorage in ThemeToggle
+- [x] T041 [US5] Add system preference detection (prefers-color-scheme) for default theme
+- [x] T042 [US5] Verify responsive layout on mobile (320px) to desktop (1920px) viewports
+- [x] T042b [US5] Create ThemeSelector modal with 10 color themes in blog/src/components/ThemeSelector.astro
+- [x] T042c [US5] Create LayoutSelector modal with 7 layout presets in blog/src/components/LayoutSelector.astro
 
 **Checkpoint**: User Story 5 complete - Responsive design and theme toggle work
 
@@ -151,12 +153,12 @@
 
 **Purpose**: Final improvements that affect multiple user stories
 
-- [ ] T043 Add favicon and site icons in blog/public/
-- [ ] T044 [P] Add meta tags for SEO (og:title, og:description, og:image) in BaseLayout
-- [ ] T045 [P] Optimize AnimFlow bundle size with dynamic imports
-- [ ] T046 Verify production build passes with `npm run build -w blog`
-- [ ] T047 Run quickstart.md validation checklist
-- [ ] T048 Create additional sample posts demonstrating various AnimFlow features
+- [x] T043 Add favicon and site icons in blog/public/
+- [x] T044 [P] Add meta tags for SEO (og:title, og:description, og:image) in BaseLayout
+- [x] T045 [P] Optimize AnimFlow bundle size with dynamic imports
+- [x] T046 Verify production build passes with `npm run build -w blog`
+- [x] T047 Run quickstart.md validation checklist
+- [x] T048 Create additional sample posts demonstrating various AnimFlow features
 
 ---
 

@@ -1,0 +1,119 @@
+---
+title: "REST API 요청 흐름 시각화"
+pubDate: 2025-12-06
+description: "AnimFlow를 활용하여 클라이언트-서버 간 REST API 요청 흐름을 시각적으로 이해합니다."
+tags: ["animflow", "api", "rest", "backend"]
+draft: false
+---
+
+import AnimFlowEmbed from '../../components/AnimFlowEmbed.astro';
+
+# REST API 요청 흐름
+
+웹 애플리케이션에서 클라이언트가 서버에 데이터를 요청하고 응답을 받는 과정을 시각화해 봅시다.
+
+## 기본 GET 요청 흐름
+
+아래 다이어그램은 사용자가 버튼을 클릭했을 때 발생하는 GET 요청의 전체 흐름을 보여줍니다.
+
+<AnimFlowEmbed
+  id="api-flow"
+  title="REST API GET Request Flow"
+  height={400}
+  yaml={`version: "1.0"
+nodes:
+  - id: client
+    type: box
+    label: Client (Browser)
+    position: { x: 80, y: 180 }
+  - id: server
+    type: box
+    label: Server (API)
+    position: { x: 350, y: 180 }
+  - id: database
+    type: database
+    label: Database
+    position: { x: 620, y: 180 }
+edges:
+  - id: e1
+    from: client
+    to: server
+    label: GET /api/users
+  - id: e2
+    from: server
+    to: database
+    label: SELECT query
+  - id: e3
+    from: database
+    to: server
+    label: Result rows
+  - id: e4
+    from: server
+    to: client
+    label: 200 OK + JSON
+scenarios:
+  - id: get-request
+    name: GET 요청 흐름
+    steps:
+      - action: highlight
+        nodes: [client]
+        style:
+          color: "#3b82f6"
+        duration: 500
+      - action: animate-edge
+        edge: e1
+        label: "GET /api/users"
+        duration: 800
+      - action: highlight
+        nodes: [server]
+        style:
+          color: "#10b981"
+        duration: 400
+      - action: animate-edge
+        edge: e2
+        label: "SELECT * FROM users"
+        duration: 600
+      - action: highlight
+        nodes: [database]
+        style:
+          color: "#8b5cf6"
+        duration: 500
+      - action: animate-edge
+        edge: e3
+        label: "user data"
+        duration: 600
+      - action: animate-edge
+        edge: e4
+        label: "200 OK"
+        duration: 800
+      - action: highlight
+        nodes: [client]
+        style:
+          color: "#4ade80"
+        duration: 500`}
+/>
+
+## 핵심 포인트
+
+1. **비동기 처리**: `fetch()` API는 Promise를 반환하여 비동기적으로 작동합니다
+2. **HTTP 메서드**: GET, POST, PUT, DELETE 등 다양한 메서드로 CRUD 작업을 수행
+3. **상태 코드**: 200(성공), 404(찾을 수 없음), 500(서버 오류) 등으로 결과를 알림
+
+## 코드 예시
+
+```javascript
+async function fetchUsers() {
+  try {
+    const response = await fetch('/api/users');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const users = await response.json();
+    return users;
+  } catch (error) {
+    console.error('Failed to fetch users:', error);
+  }
+}
+```
+
+다음 포스트에서는 POST 요청과 에러 핸들링 패턴을 더 자세히 다루겠습니다.

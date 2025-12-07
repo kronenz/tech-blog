@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-// @ts-ignore - @animflow/core types not built yet
-import { AnimFlow } from '@animflow/core';
 
 // Define ScenarioState locally since types aren't exported yet
 type ScenarioState = 'idle' | 'running' | 'paused' | 'completed';
+
+// Dynamic import for AnimFlow to optimize bundle size
+// @ts-ignore - @animflow/core types not built yet
+const loadAnimFlow = () => import('@animflow/core').then(mod => mod.AnimFlow);
 
 interface AnimFlowEmbedProps {
   id: string;
@@ -39,48 +41,66 @@ export default function AnimFlowEmbed({ title, height = 400, yaml }: AnimFlowEmb
     // Clear container
     containerRef.current.innerHTML = '';
 
-    try {
-      // Create AnimFlow instance
-      const animflow = new AnimFlow({
-        container: containerRef.current,
-        source: yaml.trim(),
-        format: 'yaml',
-        autoRender: true,
-        showControls: false,
-        showProgress: true,
-      });
+    let isMounted = true;
 
-      animflowRef.current = animflow;
+    // Dynamic import for bundle optimization
+    loadAnimFlow()
+      .then((AnimFlow) => {
+        if (!isMounted || !containerRef.current) return;
 
-      // Get scenarios
-      const diagramScenarios = animflow.getScenarios();
-      setScenarios(diagramScenarios);
+        try {
+          // Create AnimFlow instance
+          const animflow = new AnimFlow({
+            container: containerRef.current,
+            source: yaml.trim(),
+            format: 'yaml',
+            autoRender: true,
+            showControls: false,
+            showProgress: true,
+          });
 
-      // Listen to state changes
-      animflow.on('state:change', (payload: { state: ScenarioState }) => {
-        const scenarioState = payload.state;
-        if (scenarioState === 'running') {
-          setState((prev) => ({ ...prev, status: 'playing' }));
-        } else if (scenarioState === 'idle' || scenarioState === 'completed') {
-          setState((prev) => ({ ...prev, status: 'ready' }));
+          animflowRef.current = animflow;
+
+          // Get scenarios
+          const diagramScenarios = animflow.getScenarios();
+          setScenarios(diagramScenarios);
+
+          // Listen to state changes
+          animflow.on('state:change', (payload: { state: ScenarioState }) => {
+            const scenarioState = payload.state;
+            if (scenarioState === 'running') {
+              setState((prev) => ({ ...prev, status: 'playing' }));
+            } else if (scenarioState === 'idle' || scenarioState === 'completed') {
+              setState((prev) => ({ ...prev, status: 'ready' }));
+            }
+          });
+
+          setState({
+            status: 'ready',
+            speed: 1,
+            currentScenario: diagramScenarios[0]?.id,
+          });
+        } catch (err) {
+          console.error('AnimFlow initialization error:', err);
+          setState({
+            status: 'error',
+            error: err instanceof Error ? err.message : 'Unknown error occurred',
+            speed: 1,
+          });
         }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error('Failed to load AnimFlow:', err);
+        setState({
+          status: 'error',
+          error: 'Failed to load AnimFlow library',
+          speed: 1,
+        });
       });
-
-      setState({
-        status: 'ready',
-        speed: 1,
-        currentScenario: diagramScenarios[0]?.id,
-      });
-    } catch (err) {
-      console.error('AnimFlow initialization error:', err);
-      setState({
-        status: 'error',
-        error: err instanceof Error ? err.message : 'Unknown error occurred',
-        speed: 1,
-      });
-    }
 
     return () => {
+      isMounted = false;
       animflowRef.current?.destroy();
       animflowRef.current = null;
     };
