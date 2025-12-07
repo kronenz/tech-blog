@@ -1,0 +1,793 @@
+---
+title: "AnimFlow: 기술 블로그를 위한 인터랙티브 다이어그램 DSL"
+pubDate: 2025-12-08
+description: "복잡한 시스템 아키텍처를 애니메이션으로 설명하는 AnimFlow DSL 소개 및 사용 가이드"
+tags: ["animflow", "visualization", "dsl", "tutorial", "architecture"]
+---
+
+import AnimFlowEmbed from '../../components/AnimFlowEmbed.astro';
+
+# AnimFlow: 기술 블로그를 위한 인터랙티브 다이어그램 DSL
+
+기술 블로그에서 복잡한 시스템 아키텍처나 데이터 흐름을 설명할 때 가장 큰 고민은 **"어떻게 하면 독자가 직관적으로 이해할 수 있을까?"** 입니다.
+
+정적인 다이어그램은 전체 구조를 보여주지만, **시간에 따른 데이터 흐름**이나 **상태 변화**를 표현하기 어렵습니다. 그래서 AnimFlow를 만들었습니다.
+
+## AnimFlow란?
+
+AnimFlow는 **YAML 기반의 선언적 DSL(Domain Specific Language)**로, 인터랙티브 애니메이션 다이어그램을 정의합니다. 코드 몇 줄로 복잡한 시스템의 동작을 시각화할 수 있습니다.
+
+### 왜 AnimFlow인가?
+
+기존 다이어그램 도구들과 비교했을 때 AnimFlow의 차별점:
+
+| 기능 | Mermaid | draw.io | AnimFlow |
+|------|---------|---------|----------|
+| 텍스트 기반 | O | X | O |
+| 애니메이션 | X | X | **O** |
+| 인터랙티브 | X | X | **O** |
+| 시나리오 분기 | X | X | **O** |
+| 블로그 임베딩 | 어려움 | 어려움 | **쉬움** |
+
+---
+
+## 기본 개념 이해하기
+
+AnimFlow는 4가지 핵심 요소로 구성됩니다:
+
+<AnimFlowEmbed
+  id="basic-concepts"
+  title="AnimFlow 핵심 개념"
+  height={350}
+  yaml={`version: "1.0"
+metadata:
+  title: "AnimFlow 구성 요소"
+nodes:
+  - id: nodes
+    type: box
+    label: "Nodes\\n(노드)"
+    position: { x: 100, y: 150 }
+    style:
+      color: "#3b82f6"
+  - id: edges
+    type: box
+    label: "Edges\\n(연결선)"
+    position: { x: 300, y: 150 }
+    style:
+      color: "#10b981"
+  - id: scenarios
+    type: box
+    label: "Scenarios\\n(시나리오)"
+    position: { x: 500, y: 150 }
+    style:
+      color: "#f59e0b"
+  - id: steps
+    type: box
+    label: "Steps\\n(애니메이션)"
+    position: { x: 700, y: 150 }
+    style:
+      color: "#ef4444"
+edges:
+  - id: e1
+    from: nodes
+    to: edges
+    label: "연결"
+  - id: e2
+    from: edges
+    to: scenarios
+    label: "조합"
+  - id: e3
+    from: scenarios
+    to: steps
+    label: "실행"
+scenarios:
+  - id: explain
+    name: "개념 설명"
+    steps:
+      - action: highlight
+        nodes: [nodes]
+        log:
+          message: "1. Nodes: 시스템의 구성 요소 (서버, DB, 클라이언트 등)"
+          type: info
+        duration: 2000
+      - action: animate-edge
+        edge: e1
+        duration: 600
+      - action: highlight
+        nodes: [edges]
+        log:
+          message: "2. Edges: 노드 간의 연결 관계와 데이터 흐름"
+          type: info
+        duration: 2000
+      - action: animate-edge
+        edge: e2
+        duration: 600
+      - action: highlight
+        nodes: [scenarios]
+        log:
+          message: "3. Scenarios: 여러 상황을 시뮬레이션 (캐시 히트/미스 등)"
+          type: info
+        duration: 2000
+      - action: animate-edge
+        edge: e3
+        duration: 600
+      - action: highlight
+        nodes: [steps]
+        log:
+          message: "4. Steps: 실제 애니메이션 동작 정의"
+          type: success
+        duration: 2000
+logging:
+  enabled: true
+  maxEntries: 5`}
+/>
+
+**Play 버튼**을 눌러 각 개념이 어떻게 연결되는지 확인해보세요!
+
+---
+
+## 실전 예제 1: API 요청 흐름
+
+가장 기본적인 예제로, 클라이언트가 서버에 API를 호출하고 응답을 받는 과정을 시각화합니다.
+
+<AnimFlowEmbed
+  id="api-flow"
+  title="REST API 요청 흐름"
+  height={400}
+  yaml={`version: "1.0"
+metadata:
+  title: "REST API Request Flow"
+nodes:
+  - id: browser
+    type: box
+    label: "Browser\\n(React App)"
+    position: { x: 80, y: 180 }
+    style:
+      color: "#61dafb"
+  - id: nginx
+    type: box
+    label: "Nginx\\n(Reverse Proxy)"
+    position: { x: 280, y: 180 }
+    style:
+      color: "#009639"
+  - id: api
+    type: box
+    label: "API Server\\n(Node.js)"
+    position: { x: 480, y: 180 }
+    style:
+      color: "#68a063"
+  - id: postgres
+    type: database
+    label: "PostgreSQL"
+    position: { x: 680, y: 180 }
+    style:
+      color: "#336791"
+edges:
+  - id: req1
+    from: browser
+    to: nginx
+  - id: req2
+    from: nginx
+    to: api
+  - id: query
+    from: api
+    to: postgres
+  - id: result
+    from: postgres
+    to: api
+  - id: res2
+    from: api
+    to: nginx
+  - id: res1
+    from: nginx
+    to: browser
+scenarios:
+  - id: get-users
+    name: "GET /api/users"
+    steps:
+      - action: highlight
+        nodes: [browser]
+        log:
+          message: "사용자가 페이지 로드 요청"
+          type: info
+        duration: 800
+      - action: animate-edge
+        edge: req1
+        label: "GET /api/users"
+        duration: 500
+      - action: highlight
+        nodes: [nginx]
+        log:
+          message: "Nginx: 로드밸런싱 및 SSL 처리"
+          type: info
+        duration: 600
+      - action: animate-edge
+        edge: req2
+        label: "프록시 전달"
+        duration: 400
+      - action: highlight
+        nodes: [api]
+        log:
+          message: "API: 요청 파싱 및 인증 확인"
+          type: info
+        duration: 800
+      - action: animate-edge
+        edge: query
+        label: "SELECT * FROM users"
+        duration: 500
+      - action: highlight
+        nodes: [postgres]
+        log:
+          message: "DB: 쿼리 실행 (12ms)"
+          type: info
+        duration: 1000
+      - action: animate-edge
+        edge: result
+        label: "42 rows"
+        duration: 400
+      - action: highlight
+        nodes: [api]
+        log:
+          message: "API: JSON 직렬화"
+          type: info
+        duration: 500
+      - action: animate-edge
+        edge: res2
+        label: "200 OK"
+        duration: 400
+      - action: animate-edge
+        edge: res1
+        label: "JSON Response"
+        duration: 500
+      - action: highlight
+        nodes: [browser]
+        log:
+          message: "응답 완료! (Total: 156ms)"
+          type: success
+        duration: 1000
+logging:
+  enabled: true
+  maxEntries: 8`}
+/>
+
+### YAML 코드 분석
+
+```yaml
+# 노드 정의 - 시스템의 구성 요소
+nodes:
+  - id: browser          # 고유 식별자
+    type: box            # 노드 타입 (box, circle, database, icon)
+    label: "Browser"     # 표시 텍스트
+    position: { x: 80, y: 180 }  # 캔버스 내 위치
+    style:
+      color: "#61dafb"   # 노드 색상
+
+# 엣지 정의 - 노드 간 연결
+edges:
+  - id: req1
+    from: browser        # 출발 노드
+    to: nginx           # 도착 노드
+```
+
+---
+
+## 실전 예제 2: 캐시 전략 비교
+
+같은 다이어그램에서 **여러 시나리오**를 정의하여 다른 상황을 비교할 수 있습니다.
+
+<AnimFlowEmbed
+  id="cache-strategy"
+  title="캐시 전략 비교: Cache Hit vs Miss"
+  height={450}
+  yaml={`version: "1.0"
+metadata:
+  title: "Cache Strategy Comparison"
+canvas:
+  width: 900
+  height: 400
+nodes:
+  - id: app
+    type: box
+    label: "Application"
+    position: { x: 100, y: 180 }
+    style:
+      color: "#8b5cf6"
+  - id: redis
+    type: database
+    label: "Redis\\n(Cache)"
+    position: { x: 350, y: 180 }
+    style:
+      color: "#dc382d"
+  - id: mysql
+    type: database
+    label: "MySQL\\n(Primary)"
+    position: { x: 600, y: 180 }
+    style:
+      color: "#00758f"
+edges:
+  - id: check-cache
+    from: app
+    to: redis
+    label: "1. Check"
+  - id: cache-response
+    from: redis
+    to: app
+    label: "Response"
+    style:
+      lineType: dashed
+  - id: db-query
+    from: app
+    to: mysql
+    label: "2. Query"
+  - id: db-response
+    from: mysql
+    to: app
+    label: "Data"
+    style:
+      lineType: dashed
+  - id: update-cache
+    from: app
+    to: redis
+    label: "3. Update"
+    style:
+      lineType: dotted
+scenarios:
+  - id: cache-hit
+    name: "Cache Hit (빠름)"
+    steps:
+      - action: highlight
+        nodes: [app]
+        log:
+          message: "요청 수신: GET /user/123"
+          type: info
+        duration: 600
+      - action: animate-edge
+        edge: check-cache
+        label: "GET user:123"
+        duration: 500
+      - action: highlight
+        nodes: [redis]
+        style:
+          color: "#22c55e"
+        log:
+          message: "Cache HIT! 데이터 발견"
+          type: success
+        duration: 800
+      - action: animate-edge
+        edge: cache-response
+        label: "캐시된 데이터"
+        duration: 400
+      - action: highlight
+        nodes: [app]
+        log:
+          message: "응답 완료 (2ms) - DB 쿼리 없음!"
+          type: success
+        duration: 800
+  - id: cache-miss
+    name: "Cache Miss (느림)"
+    steps:
+      - action: highlight
+        nodes: [app]
+        log:
+          message: "요청 수신: GET /user/456"
+          type: info
+        duration: 600
+      - action: animate-edge
+        edge: check-cache
+        label: "GET user:456"
+        duration: 500
+      - action: highlight
+        nodes: [redis]
+        style:
+          color: "#ef4444"
+        log:
+          message: "Cache MISS! 데이터 없음"
+          type: warning
+        duration: 800
+      - action: animate-edge
+        edge: db-query
+        label: "SELECT * FROM users WHERE id=456"
+        duration: 600
+      - action: highlight
+        nodes: [mysql]
+        log:
+          message: "DB 쿼리 실행 중... (45ms)"
+          type: info
+        duration: 1200
+      - action: animate-edge
+        edge: db-response
+        label: "user data"
+        duration: 500
+      - action: highlight
+        nodes: [app]
+        log:
+          message: "캐시 업데이트 중..."
+          type: info
+        duration: 400
+      - action: animate-edge
+        edge: update-cache
+        label: "SET user:456 (TTL: 3600s)"
+        duration: 500
+      - action: highlight
+        nodes: [redis]
+        style:
+          color: "#22c55e"
+        log:
+          message: "캐시 저장 완료"
+          type: info
+        duration: 500
+      - action: highlight
+        nodes: [app]
+        log:
+          message: "응답 완료 (52ms) - 다음 요청은 빠름!"
+          type: success
+        duration: 800
+logging:
+  enabled: true
+  maxEntries: 6`}
+/>
+
+**시나리오 드롭다운**에서 "Cache Hit"과 "Cache Miss"를 번갈아 선택해보세요. 같은 아키텍처에서 캐시 유무에 따른 차이를 직관적으로 이해할 수 있습니다.
+
+---
+
+## 실전 예제 3: 마이크로서비스 통신
+
+복잡한 마이크로서비스 아키텍처에서 서비스 간 통신을 시각화합니다.
+
+<AnimFlowEmbed
+  id="microservices"
+  title="마이크로서비스 주문 처리 흐름"
+  height={500}
+  yaml={`version: "1.0"
+metadata:
+  title: "Order Processing in Microservices"
+canvas:
+  width: 1000
+  height: 450
+  sections:
+    - id: gateway
+      label: "API Gateway"
+      bounds: { y: 0, height: 100 }
+      style:
+        background: "rgba(59, 130, 246, 0.1)"
+    - id: services
+      label: "Microservices"
+      bounds: { y: 100, height: 250 }
+      style:
+        background: "rgba(16, 185, 129, 0.1)"
+    - id: data
+      label: "Data Layer"
+      bounds: { y: 350, height: 100 }
+      style:
+        background: "rgba(245, 158, 11, 0.1)"
+nodes:
+  - id: client
+    type: box
+    label: "Mobile App"
+    position: { x: 80, y: 30 }
+    style:
+      color: "#6366f1"
+  - id: gateway
+    type: box
+    label: "API Gateway"
+    position: { x: 280, y: 30 }
+    section: gateway
+    style:
+      color: "#3b82f6"
+  - id: order-svc
+    type: box
+    label: "Order\\nService"
+    position: { x: 150, y: 170 }
+    section: services
+    style:
+      color: "#10b981"
+  - id: inventory-svc
+    type: box
+    label: "Inventory\\nService"
+    position: { x: 350, y: 170 }
+    section: services
+    style:
+      color: "#f59e0b"
+  - id: payment-svc
+    type: box
+    label: "Payment\\nService"
+    position: { x: 550, y: 170 }
+    section: services
+    style:
+      color: "#ef4444"
+  - id: notification-svc
+    type: box
+    label: "Notification\\nService"
+    position: { x: 750, y: 170 }
+    section: services
+    style:
+      color: "#8b5cf6"
+  - id: kafka
+    type: box
+    label: "Kafka"
+    position: { x: 450, y: 280 }
+    section: services
+    style:
+      color: "#000000"
+  - id: order-db
+    type: database
+    label: "Orders DB"
+    position: { x: 150, y: 380 }
+    section: data
+  - id: inventory-db
+    type: database
+    label: "Inventory DB"
+    position: { x: 350, y: 380 }
+    section: data
+edges:
+  - id: e1
+    from: client
+    to: gateway
+  - id: e2
+    from: gateway
+    to: order-svc
+  - id: e3
+    from: order-svc
+    to: inventory-svc
+  - id: e4
+    from: inventory-svc
+    to: order-svc
+    style:
+      lineType: dashed
+  - id: e5
+    from: order-svc
+    to: payment-svc
+  - id: e6
+    from: payment-svc
+    to: order-svc
+    style:
+      lineType: dashed
+  - id: e7
+    from: order-svc
+    to: kafka
+  - id: e8
+    from: kafka
+    to: notification-svc
+  - id: e9
+    from: order-svc
+    to: order-db
+  - id: e10
+    from: inventory-svc
+    to: inventory-db
+scenarios:
+  - id: order-flow
+    name: "주문 처리 흐름"
+    steps:
+      - action: highlight
+        nodes: [client]
+        log:
+          message: "고객이 주문 버튼 클릭"
+          type: info
+        duration: 800
+      - action: animate-edge
+        edge: e1
+        label: "POST /orders"
+        duration: 500
+      - action: highlight
+        nodes: [gateway]
+        log:
+          message: "Gateway: 인증 확인, 라우팅"
+          type: info
+        duration: 600
+      - action: animate-edge
+        edge: e2
+        label: "주문 생성 요청"
+        duration: 400
+      - action: highlight
+        nodes: [order-svc]
+        log:
+          message: "Order Service: 주문 검증 시작"
+          type: info
+        duration: 600
+      - action: animate-edge
+        edge: e3
+        label: "재고 확인"
+        duration: 400
+      - action: highlight
+        nodes: [inventory-svc]
+        log:
+          message: "Inventory: 재고 2개 확인"
+          type: info
+        duration: 800
+      - action: animate-edge
+        edge: e10
+        label: "재고 차감"
+        duration: 400
+      - action: animate-edge
+        edge: e4
+        label: "재고 OK"
+        duration: 400
+      - action: animate-edge
+        edge: e5
+        label: "결제 요청"
+        duration: 400
+      - action: highlight
+        nodes: [payment-svc]
+        log:
+          message: "Payment: PG사 결제 처리 중..."
+          type: info
+        duration: 1200
+      - action: animate-edge
+        edge: e6
+        label: "결제 완료"
+        duration: 400
+      - action: highlight
+        nodes: [order-svc]
+        log:
+          message: "Order: 주문 확정"
+          type: success
+        duration: 500
+      - action: animate-edge
+        edge: e9
+        label: "주문 저장"
+        duration: 400
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: e7
+            label: "이벤트 발행"
+            duration: 600
+      - action: highlight
+        nodes: [kafka]
+        log:
+          message: "Kafka: OrderCreated 이벤트"
+          type: info
+        duration: 500
+      - action: animate-edge
+        edge: e8
+        label: "이벤트 소비"
+        duration: 400
+      - action: highlight
+        nodes: [notification-svc]
+        log:
+          message: "Notification: 주문 확인 알림 발송"
+          type: success
+        duration: 800
+logging:
+  enabled: true
+  maxEntries: 8`}
+/>
+
+---
+
+## AnimFlow DSL 작성 가이드
+
+### 1. 기본 구조
+
+```yaml
+version: "1.0"           # 필수: DSL 버전
+metadata:                # 선택: 메타데이터
+  title: "제목"
+  description: "설명"
+
+canvas:                  # 선택: 캔버스 설정
+  width: 1200
+  height: 800
+
+nodes: [...]            # 필수: 노드 배열
+edges: [...]            # 선택: 엣지 배열
+scenarios: [...]        # 선택: 시나리오 배열
+
+logging:                # 선택: 로그 패널 설정
+  enabled: true
+```
+
+### 2. 노드 타입
+
+| 타입 | 용도 | 예시 |
+|------|------|------|
+| `box` | 일반 서비스, 컴포넌트 | API Server, Gateway |
+| `database` | 데이터 저장소 | MySQL, Redis, S3 |
+| `circle` | 원형 노드 | 로드밸런서, 라운드로빈 |
+| `group` | 노드 그룹핑 | VPC, Kubernetes Cluster |
+
+### 3. 주요 액션
+
+```yaml
+# 노드 강조
+- action: highlight
+  nodes: [node-id]
+  style:
+    color: "#22c55e"    # 강조 색상
+  duration: 1000         # 지속 시간 (ms)
+
+# 엣지 애니메이션
+- action: animate-edge
+  edge: edge-id
+  label: "데이터 전송"   # 애니메이션 라벨
+  duration: 800
+
+# 로그 출력
+- action: log
+  log:
+    message: "처리 완료"
+    type: success        # info, success, warning, error
+
+# 병렬 실행
+- action: parallel
+  steps:
+    - action: highlight
+      nodes: [node-a]
+    - action: highlight
+      nodes: [node-b]
+```
+
+### 4. 스타일링 팁
+
+```yaml
+# 색상 권장값
+style:
+  color: "#3b82f6"   # 파랑 - 프론트엔드, UI
+  color: "#10b981"   # 초록 - 백엔드, 성공
+  color: "#f59e0b"   # 노랑 - 경고, 주의
+  color: "#ef4444"   # 빨강 - 에러, 중요
+  color: "#8b5cf6"   # 보라 - 특수 기능
+
+# 선 스타일
+style:
+  lineType: solid    # 기본 연결
+  lineType: dashed   # 응답, 반환
+  lineType: dotted   # 비동기, 옵션
+```
+
+---
+
+## 블로그에 임베딩하기
+
+### Astro에서 사용
+
+```jsx
+import AnimFlowEmbed from '../../components/AnimFlowEmbed.astro';
+
+<AnimFlowEmbed
+  id="unique-id"
+  title="다이어그램 제목"
+  height={450}
+  yaml={`version: "1.0"
+nodes:
+  - id: example
+    label: "Example"
+    position: { x: 100, y: 100 }
+...`}
+/>
+```
+
+### React에서 사용
+
+```jsx
+import { AnimFlowViewer } from '@animflow/core';
+
+function MyComponent() {
+  const yaml = `...`;
+
+  return (
+    <AnimFlowViewer
+      yaml={yaml}
+      height={450}
+    />
+  );
+}
+```
+
+---
+
+## 마무리
+
+AnimFlow를 사용하면 복잡한 시스템 아키텍처를 **독자가 직접 체험**할 수 있는 인터랙티브 콘텐츠로 변환할 수 있습니다.
+
+### 활용 아이디어
+
+- **시스템 설계 문서**: 아키텍처 결정 이유를 시각적으로 설명
+- **장애 분석 포스트모템**: 장애 발생 경로를 단계별로 재현
+- **온보딩 문서**: 신입 개발자에게 시스템 흐름 교육
+- **기술 제안서**: 새로운 아키텍처 도입 효과 시각화
+
+AnimFlow DSL 전체 스펙은 [공식 문서](/docs/animflow-dsl-spec)를 참조하세요.
+
+**Happy Diagramming!**
