@@ -50,6 +50,7 @@ export default function AnimFlowEmbed({ title, height = 400, yaml }: AnimFlowEmb
 
         try {
           // Create AnimFlow instance
+          // Note: yaml-parser.ts in @animflow/core handles YAML indentation fixing
           const animflow = new AnimFlow({
             container: containerRef.current,
             source: yaml.trim(),

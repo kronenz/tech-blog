@@ -39,7 +39,8 @@ AnimFlow는 4가지 핵심 요소로 구성됩니다:
   id="basic-concepts"
   title="AnimFlow 핵심 개념"
   height={350}
-  yaml={`version: "1.0"
+  yaml={`
+version: "1.0"
 metadata:
   title: "AnimFlow 구성 요소"
 nodes:
@@ -119,7 +120,8 @@ scenarios:
         duration: 2000
 logging:
   enabled: true
-  maxEntries: 5`}
+  maxEntries: 5
+`}
 />
 
 **Play 버튼**을 눌러 각 개념이 어떻게 연결되는지 확인해보세요!
@@ -134,7 +136,8 @@ logging:
   id="api-flow"
   title="REST API 요청 흐름"
   height={400}
-  yaml={`version: "1.0"
+  yaml={`
+version: "1.0"
 metadata:
   title: "REST API Request Flow"
 nodes:
@@ -247,7 +250,8 @@ scenarios:
         duration: 1000
 logging:
   enabled: true
-  maxEntries: 8`}
+  maxEntries: 8
+`}
 />
 
 ### YAML 코드 분석
@@ -279,7 +283,8 @@ edges:
   id="cache-strategy"
   title="캐시 전략 비교: Cache Hit vs Miss"
   height={450}
-  yaml={`version: "1.0"
+  yaml={`
+version: "1.0"
 metadata:
   title: "Cache Strategy Comparison"
 canvas:
@@ -424,7 +429,8 @@ scenarios:
         duration: 800
 logging:
   enabled: true
-  maxEntries: 6`}
+  maxEntries: 6
+`}
 />
 
 **시나리오 드롭다운**에서 "Cache Hit"과 "Cache Miss"를 번갈아 선택해보세요. 같은 아키텍처에서 캐시 유무에 따른 차이를 직관적으로 이해할 수 있습니다.
@@ -439,7 +445,8 @@ logging:
   id="microservices"
   title="마이크로서비스 주문 처리 흐름"
   height={500}
-  yaml={`version: "1.0"
+  yaml={`
+version: "1.0"
 metadata:
   title: "Order Processing in Microservices"
 canvas:
@@ -651,7 +658,8 @@ scenarios:
         duration: 800
 logging:
   enabled: true
-  maxEntries: 8`}
+  maxEntries: 8
+`}
 />
 
 ---

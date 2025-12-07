@@ -31,8 +31,14 @@ export function validateDiagram(data: unknown): DiagramConfig {
     const errors = formatErrors(validateSchema.errors || []);
     // Log detailed errors for debugging
     console.error('Validation errors:', JSON.stringify(validateSchema.errors, null, 2));
+
+    // Build detailed error message including all error details
+    const errorDetails = errors
+      .map((e, i) => `  ${i + 1}. [${e.path}] ${e.message}`)
+      .join('\n');
+
     throw new ValidationError(
-      `Diagram validation failed with ${errors.length} error(s)`,
+      `Diagram validation failed with ${errors.length} error(s):\n${errorDetails}`,
       errors
     );
   }
