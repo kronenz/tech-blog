@@ -1,0 +1,811 @@
+---
+title: "Prometheus HA 구성: Thanos로 Kubernetes에서 구축하기"
+pubDate: 2025-12-07
+description: "Thanos를 활용하여 Kubernetes 환경에서 Prometheus 고가용성(HA) 아키텍처를 구성하는 방법을 심층적으로 다룹니다."
+tags: ["prometheus", "thanos", "kubernetes", "monitoring", "ha", "devops"]
+draft: false
+---
+
+import AnimFlowEmbed from '../../components/AnimFlowEmbed.astro';
+
+# Prometheus HA 구성: Thanos로 Kubernetes에서 구축하기
+
+프로덕션 환경에서 모니터링 시스템의 고가용성은 필수입니다. 단일 Prometheus 인스턴스는 SPOF(Single Point of Failure)가 될 수 있으며, 장기 메트릭 보존과 글로벌 뷰 제공에 한계가 있습니다.
+
+이 글에서는 **Thanos**를 활용하여 이러한 한계를 극복하는 방법을 다룹니다.
+
+## Prometheus 단독 구성의 한계
+
+기존 Prometheus 단독 구성의 문제점:
+
+1. **고가용성 부재**: 단일 인스턴스 장애 시 모니터링 중단
+2. **수평 확장 불가**: 단일 노드 리소스 제한
+3. **장기 보존 어려움**: 로컬 스토리지 의존
+4. **글로벌 뷰 부재**: 멀티 클러스터 환경에서 통합 쿼리 불가
+
+## Thanos 아키텍처 개요
+
+Thanos는 Prometheus를 확장하여 위 문제들을 해결합니다.
+
+<AnimFlowEmbed
+  id="thanos-architecture"
+  title="Thanos Architecture Overview"
+  height={500}
+  yaml={`version: "1.0"
+nodes:
+  - id: prom1
+    type: box
+    label: Prometheus 1
+    position: { x: 80, y: 100 }
+  - id: prom2
+    type: box
+    label: Prometheus 2
+    position: { x: 80, y: 250 }
+  - id: sidecar1
+    type: box
+    label: Sidecar
+    position: { x: 230, y: 100 }
+  - id: sidecar2
+    type: box
+    label: Sidecar
+    position: { x: 230, y: 250 }
+  - id: store
+    type: database
+    label: Store Gateway
+    position: { x: 380, y: 320 }
+  - id: objstore
+    type: database
+    label: Object Storage (S3)
+    position: { x: 530, y: 320 }
+  - id: query
+    type: box
+    label: Thanos Query
+    position: { x: 380, y: 175 }
+  - id: compact
+    type: box
+    label: Compactor
+    position: { x: 530, y: 100 }
+  - id: grafana
+    type: box
+    label: Grafana
+    position: { x: 530, y: 175 }
+edges:
+  - id: e1
+    from: prom1
+    to: sidecar1
+  - id: e2
+    from: prom2
+    to: sidecar2
+  - id: e3
+    from: sidecar1
+    to: query
+    label: gRPC
+  - id: e4
+    from: sidecar2
+    to: query
+    label: gRPC
+  - id: e5
+    from: sidecar1
+    to: objstore
+    label: upload
+  - id: e6
+    from: sidecar2
+    to: objstore
+    label: upload
+  - id: e7
+    from: store
+    to: objstore
+    label: read
+  - id: e8
+    from: store
+    to: query
+    label: gRPC
+  - id: e9
+    from: query
+    to: grafana
+    label: PromQL
+  - id: e10
+    from: compact
+    to: objstore
+    label: compact
+scenarios:
+  - id: query-flow
+    name: 쿼리 흐름
+    steps:
+      - action: highlight
+        nodes: [grafana]
+        style:
+          color: "#3b82f6"
+        duration: 500
+      - action: animate-edge
+        edge: e9
+        label: "PromQL query"
+        duration: 600
+      - action: highlight
+        nodes: [query]
+        style:
+          color: "#8b5cf6"
+        duration: 600
+      - action: animate-edge
+        edge: e3
+        label: "fan-out"
+        duration: 400
+      - action: animate-edge
+        edge: e4
+        label: "fan-out"
+        duration: 400
+      - action: highlight
+        nodes: [sidecar1, sidecar2]
+        style:
+          color: "#10b981"
+        duration: 500
+      - action: animate-edge
+        edge: e8
+        label: "historical"
+        duration: 500
+      - action: highlight
+        nodes: [store]
+        style:
+          color: "#f59e0b"
+        duration: 500
+  - id: upload-flow
+    name: 블록 업로드 흐름
+    steps:
+      - action: highlight
+        nodes: [prom1, prom2]
+        style:
+          color: "#3b82f6"
+        duration: 600
+      - action: animate-edge
+        edge: e1
+        label: "TSDB blocks"
+        duration: 400
+      - action: animate-edge
+        edge: e2
+        label: "TSDB blocks"
+        duration: 400
+      - action: highlight
+        nodes: [sidecar1, sidecar2]
+        style:
+          color: "#10b981"
+        duration: 500
+      - action: animate-edge
+        edge: e5
+        label: "upload block"
+        duration: 600
+      - action: animate-edge
+        edge: e6
+        label: "upload block"
+        duration: 600
+      - action: highlight
+        nodes: [objstore]
+        style:
+          color: "#f59e0b"
+        duration: 800
+      - action: animate-edge
+        edge: e10
+        label: "compaction"
+        duration: 600
+      - action: highlight
+        nodes: [compact]
+        style:
+          color: "#ef4444"
+        duration: 600`}
+/>
+
+### 핵심 컴포넌트
+
+| 컴포넌트 | 역할 |
+|---------|------|
+| **Sidecar** | Prometheus와 함께 배포, 실시간 데이터 제공 및 블록 업로드 |
+| **Query** | 여러 소스에서 데이터를 집계하여 글로벌 뷰 제공 |
+| **Store Gateway** | Object Storage의 히스토리 데이터 쿼리 |
+| **Compactor** | 블록 압축 및 다운샘플링으로 쿼리 성능 최적화 |
+| **Ruler** | (선택) 글로벌 레벨의 recording/alerting rules |
+
+## Kubernetes 배포 전략
+
+### 1. Namespace 및 기본 설정
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: thanos-objstore-config
+  namespace: monitoring
+type: Opaque
+stringData:
+  objstore.yml: |
+    type: S3
+    config:
+      bucket: thanos-metrics
+      endpoint: s3.amazonaws.com
+      region: ap-northeast-2
+      access_key: ${AWS_ACCESS_KEY}
+      secret_key: ${AWS_SECRET_KEY}
+```
+
+### 2. Prometheus with Sidecar (StatefulSet)
+
+HA 구성을 위해 최소 2개의 Prometheus replica를 배포합니다.
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  serviceName: prometheus
+  replicas: 2
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        thanos-store-api: "true"
+    spec:
+      containers:
+        # Prometheus Container
+        - name: prometheus
+          image: prom/prometheus:v2.47.0
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=6h
+            - --storage.tsdb.min-block-duration=2h
+            - --storage.tsdb.max-block-duration=2h
+            - --web.enable-lifecycle
+            - --web.enable-admin-api
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: prometheus-data
+              mountPath: /prometheus
+            - name: prometheus-config
+              mountPath: /etc/prometheus
+
+        # Thanos Sidecar Container
+        - name: thanos-sidecar
+          image: quay.io/thanos/thanos:v0.32.0
+          args:
+            - sidecar
+            - --tsdb.path=/prometheus
+            - --prometheus.url=http://localhost:9090
+            - --grpc-address=0.0.0.0:10901
+            - --http-address=0.0.0.0:10902
+            - --objstore.config-file=/etc/thanos/objstore.yml
+          ports:
+            - containerPort: 10901
+              name: grpc
+            - containerPort: 10902
+              name: http
+          volumeMounts:
+            - name: prometheus-data
+              mountPath: /prometheus
+            - name: thanos-objstore-config
+              mountPath: /etc/thanos
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config
+        - name: thanos-objstore-config
+          secret:
+            secretName: thanos-objstore-config
+  volumeClaimTemplates:
+    - metadata:
+        name: prometheus-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 50Gi
+```
+
+### 3. Thanos Query (Deployment)
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thanos-query
+  namespace: monitoring
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: thanos-query
+  template:
+    metadata:
+      labels:
+        app: thanos-query
+    spec:
+      containers:
+        - name: thanos-query
+          image: quay.io/thanos/thanos:v0.32.0
+          args:
+            - query
+            - --http-address=0.0.0.0:9090
+            - --grpc-address=0.0.0.0:10901
+            - --query.replica-label=prometheus_replica
+            - --store=dnssrv+_grpc._tcp.thanos-sidecar.monitoring.svc
+            - --store=dnssrv+_grpc._tcp.thanos-store.monitoring.svc
+          ports:
+            - containerPort: 9090
+              name: http
+            - containerPort: 10901
+              name: grpc
+```
+
+### 4. Store Gateway (StatefulSet)
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-store
+  namespace: monitoring
+spec:
+  serviceName: thanos-store
+  replicas: 2
+  selector:
+    matchLabels:
+      app: thanos-store
+  template:
+    metadata:
+      labels:
+        app: thanos-store
+        thanos-store-api: "true"
+    spec:
+      containers:
+        - name: thanos-store
+          image: quay.io/thanos/thanos:v0.32.0
+          args:
+            - store
+            - --data-dir=/var/thanos/store
+            - --objstore.config-file=/etc/thanos/objstore.yml
+            - --grpc-address=0.0.0.0:10901
+            - --http-address=0.0.0.0:10902
+          ports:
+            - containerPort: 10901
+              name: grpc
+            - containerPort: 10902
+              name: http
+          volumeMounts:
+            - name: store-cache
+              mountPath: /var/thanos/store
+            - name: thanos-objstore-config
+              mountPath: /etc/thanos
+      volumes:
+        - name: thanos-objstore-config
+          secret:
+            secretName: thanos-objstore-config
+  volumeClaimTemplates:
+    - metadata:
+        name: store-cache
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+```
+
+### 5. Compactor (Singleton)
+
+Compactor는 반드시 **단일 인스턴스**로 실행해야 합니다.
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-compactor
+  namespace: monitoring
+spec:
+  serviceName: thanos-compactor
+  replicas: 1  # 반드시 1
+  selector:
+    matchLabels:
+      app: thanos-compactor
+  template:
+    metadata:
+      labels:
+        app: thanos-compactor
+    spec:
+      containers:
+        - name: thanos-compactor
+          image: quay.io/thanos/thanos:v0.32.0
+          args:
+            - compact
+            - --data-dir=/var/thanos/compact
+            - --objstore.config-file=/etc/thanos/objstore.yml
+            - --http-address=0.0.0.0:10902
+            - --wait
+            - --retention.resolution-raw=30d
+            - --retention.resolution-5m=60d
+            - --retention.resolution-1h=1y
+            - --downsample.concurrency=4
+          volumeMounts:
+            - name: compact-data
+              mountPath: /var/thanos/compact
+            - name: thanos-objstore-config
+              mountPath: /etc/thanos
+      volumes:
+        - name: thanos-objstore-config
+          secret:
+            secretName: thanos-objstore-config
+  volumeClaimTemplates:
+    - metadata:
+        name: compact-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 100Gi
+```
+
+## 데이터 흐름 상세
+
+### 쿼리 처리 흐름
+
+<AnimFlowEmbed
+  id="query-detail"
+  title="Thanos Query Processing"
+  height={400}
+  yaml={`version: "1.0"
+nodes:
+  - id: client
+    type: box
+    label: Grafana/API
+    position: { x: 80, y: 180 }
+  - id: query
+    type: box
+    label: Thanos Query
+    position: { x: 250, y: 180 }
+  - id: sidecar
+    type: box
+    label: Sidecar (실시간)
+    position: { x: 450, y: 100 }
+  - id: store
+    type: database
+    label: Store GW (히스토리)
+    position: { x: 450, y: 260 }
+edges:
+  - id: e1
+    from: client
+    to: query
+    label: PromQL
+  - id: e2
+    from: query
+    to: sidecar
+    label: gRPC StoreAPI
+  - id: e3
+    from: query
+    to: store
+    label: gRPC StoreAPI
+  - id: e4
+    from: sidecar
+    to: query
+    label: Series
+  - id: e5
+    from: store
+    to: query
+    label: Series
+scenarios:
+  - id: fanout-query
+    name: Fan-out 쿼리 처리
+    steps:
+      - action: highlight
+        nodes: [client]
+        style:
+          color: "#6b7280"
+        duration: 400
+      - action: animate-edge
+        edge: e1
+        label: "rate(http_requests[5m])"
+        duration: 600
+      - action: highlight
+        nodes: [query]
+        style:
+          color: "#3b82f6"
+        duration: 500
+      - action: animate-edge
+        edge: e2
+        label: "recent data"
+        duration: 400
+      - action: animate-edge
+        edge: e3
+        label: "historical data"
+        duration: 400
+      - action: highlight
+        nodes: [sidecar, store]
+        style:
+          color: "#10b981"
+        duration: 600
+      - action: animate-edge
+        edge: e4
+        label: "series chunks"
+        duration: 500
+      - action: animate-edge
+        edge: e5
+        label: "series chunks"
+        duration: 500
+      - action: highlight
+        nodes: [query]
+        style:
+          color: "#8b5cf6"
+        duration: 600`}
+/>
+
+Thanos Query는 **Fan-out** 방식으로 동작합니다:
+
+1. 클라이언트가 PromQL 쿼리 요청
+2. Query가 모든 Store API 엔드포인트에 병렬 요청
+3. Sidecar: 최근 데이터 (아직 업로드되지 않은 블록)
+4. Store Gateway: Object Storage의 히스토리 데이터
+5. Query가 결과를 병합하고 중복 제거
+
+### Deduplication 원리
+
+같은 메트릭을 수집하는 여러 Prometheus 인스턴스가 있을 때, Query는 `--query.replica-label` 설정을 통해 중복을 제거합니다.
+
+```yaml
+# Prometheus 설정에 replica label 추가
+global:
+  external_labels:
+    cluster: production
+    prometheus_replica: $(POD_NAME)  # prometheus-0, prometheus-1
+```
+
+## 다운샘플링 전략
+
+<AnimFlowEmbed
+  id="downsampling"
+  title="Compactor Downsampling Process"
+  height={380}
+  yaml={`version: "1.0"
+nodes:
+  - id: raw
+    type: database
+    label: Raw (5s resolution)
+    position: { x: 100, y: 180 }
+  - id: compact
+    type: box
+    label: Compactor
+    position: { x: 300, y: 180 }
+  - id: ds5m
+    type: database
+    label: 5m Downsampled
+    position: { x: 500, y: 100 }
+  - id: ds1h
+    type: database
+    label: 1h Downsampled
+    position: { x: 500, y: 260 }
+edges:
+  - id: e1
+    from: raw
+    to: compact
+    label: read
+  - id: e2
+    from: compact
+    to: ds5m
+    label: aggregate
+  - id: e3
+    from: compact
+    to: ds1h
+    label: aggregate
+scenarios:
+  - id: downsample-flow
+    name: 다운샘플링 과정
+    steps:
+      - action: highlight
+        nodes: [raw]
+        style:
+          color: "#3b82f6"
+        duration: 600
+      - action: animate-edge
+        edge: e1
+        label: "30+ days old"
+        duration: 600
+      - action: highlight
+        nodes: [compact]
+        style:
+          color: "#f59e0b"
+        duration: 800
+      - action: animate-edge
+        edge: e2
+        label: "min/max/sum/count"
+        duration: 600
+      - action: highlight
+        nodes: [ds5m]
+        style:
+          color: "#10b981"
+        duration: 500
+      - action: animate-edge
+        edge: e3
+        label: "min/max/sum/count"
+        duration: 600
+      - action: highlight
+        nodes: [ds1h]
+        style:
+          color: "#8b5cf6"
+        duration: 500`}
+/>
+
+Compactor의 다운샘플링 전략:
+
+| Resolution | 보존 기간 | 용도 |
+|------------|----------|------|
+| Raw | 30일 | 상세 분석, 디버깅 |
+| 5분 | 60일 | 일반적인 대시보드 |
+| 1시간 | 1년 | 장기 트렌드 분석 |
+
+## 운영 고려사항
+
+### 1. Object Storage 비용 최적화
+
+```yaml
+# Compactor retention 설정
+args:
+  - --retention.resolution-raw=14d      # 비용 절감을 위해 줄임
+  - --retention.resolution-5m=90d
+  - --retention.resolution-1h=365d
+```
+
+### 2. Query 성능 튜닝
+
+```yaml
+args:
+  - --query.timeout=2m
+  - --query.max-concurrent=20
+  - --query.lookback-delta=5m
+  - --query.partial-response    # 일부 Store 실패 시에도 응답
+```
+
+### 3. Store Gateway 캐싱
+
+```yaml
+args:
+  - --index-cache-size=1GB
+  - --chunk-pool-size=4GB
+```
+
+### 4. Alerting on Thanos
+
+```yaml
+# Thanos 자체 모니터링 알림
+groups:
+  - name: thanos
+    rules:
+      - alert: ThanosSidecarUnhealthy
+        expr: thanos_sidecar_prometheus_up != 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Thanos Sidecar cannot reach Prometheus"
+
+      - alert: ThanosCompactorHalted
+        expr: thanos_compact_halted == 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Thanos Compactor has halted"
+```
+
+## 멀티 클러스터 구성
+
+<AnimFlowEmbed
+  id="multi-cluster"
+  title="Multi-Cluster Federation"
+  height={450}
+  yaml={`version: "1.0"
+nodes:
+  - id: cluster1
+    type: box
+    label: Cluster A (Seoul)
+    position: { x: 80, y: 100 }
+  - id: cluster2
+    type: box
+    label: Cluster B (Tokyo)
+    position: { x: 80, y: 250 }
+  - id: s3a
+    type: database
+    label: S3 (Seoul)
+    position: { x: 280, y: 100 }
+  - id: s3b
+    type: database
+    label: S3 (Tokyo)
+    position: { x: 280, y: 250 }
+  - id: globalquery
+    type: box
+    label: Global Thanos Query
+    position: { x: 480, y: 175 }
+  - id: grafana
+    type: box
+    label: Global Grafana
+    position: { x: 650, y: 175 }
+edges:
+  - id: e1
+    from: cluster1
+    to: s3a
+    label: upload
+  - id: e2
+    from: cluster2
+    to: s3b
+    label: upload
+  - id: e3
+    from: s3a
+    to: globalquery
+    label: Store API
+  - id: e4
+    from: s3b
+    to: globalquery
+    label: Store API
+  - id: e5
+    from: globalquery
+    to: grafana
+    label: PromQL
+scenarios:
+  - id: global-query
+    name: 글로벌 쿼리
+    steps:
+      - action: highlight
+        nodes: [grafana]
+        style:
+          color: "#3b82f6"
+        duration: 500
+      - action: animate-edge
+        edge: e5
+        label: "sum by (cluster)"
+        duration: 600
+      - action: highlight
+        nodes: [globalquery]
+        style:
+          color: "#8b5cf6"
+        duration: 600
+      - action: animate-edge
+        edge: e3
+        label: "Seoul data"
+        duration: 500
+      - action: animate-edge
+        edge: e4
+        label: "Tokyo data"
+        duration: 500
+      - action: highlight
+        nodes: [s3a, s3b]
+        style:
+          color: "#f59e0b"
+        duration: 600
+      - action: highlight
+        nodes: [cluster1, cluster2]
+        style:
+          color: "#10b981"
+        duration: 500`}
+/>
+
+각 클러스터의 Prometheus + Sidecar가 독립적으로 동작하고, Global Query가 모든 데이터 소스를 집계합니다.
+
+## 결론
+
+Thanos를 활용한 Prometheus HA 구성은:
+
+- **고가용성**: 다중 Prometheus replica + 중복 제거
+- **장기 보존**: Object Storage 기반 무제한 저장
+- **글로벌 뷰**: 멀티 클러스터 통합 쿼리
+- **비용 효율**: 다운샘플링으로 스토리지 최적화
+
+복잡해 보이지만, 각 컴포넌트의 역할을 이해하면 운영이 수월해집니다. 프로덕션 환경에서는 반드시 Thanos 자체에 대한 모니터링과 알림도 구성하세요.
+
+## 참고 자료
+
+- [Thanos 공식 문서](https://thanos.io/tip/thanos/getting-started.md/)
+- [Prometheus Operator with Thanos](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/thanos.md)
+- [Thanos Design](https://thanos.io/tip/thanos/design.md/)
