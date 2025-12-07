@@ -34,3 +34,9 @@ coverage/
 
 # Vite
 *.local
+
+# Vercel
+.vercel/
+
+# Astro
+.astro/
