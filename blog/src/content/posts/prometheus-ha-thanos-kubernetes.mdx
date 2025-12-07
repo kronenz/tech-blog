@@ -197,7 +197,7 @@ scenarios:
 
 | 컴포넌트 | 역할 |
 |---------|------|
-| **Sidecar** | Prometheus와 함께 배포, 실시간 데이터 제공 및 블록 업로드 |
+| **Sidecar** | Prometheus와 함께 배포, 실시간 데이터 제공 및 블록 업로드 (블록 생성 후 2-3시간 지연) |
 | **Query** | 여러 소스에서 데이터를 집계하여 글로벌 뷰 제공 |
 | **Store Gateway** | Object Storage의 히스토리 데이터 쿼리 |
 | **Compactor** | 블록 압축 및 다운샘플링으로 쿼리 성능 최적화 |
@@ -313,6 +313,9 @@ metadata:
   namespace: monitoring
 spec:
   serviceName: prometheus
+  # HA를 위한 replica 수. Prometheus는 분산 합의 시스템이 아니므로 quorum 불필요
+  # 각 replica는 동일한 타겟을 독립적으로 스크랩 → 데이터 중복 발생 → Query에서 dedup 처리
+  # 2개면 단일 장애점 제거에 충분. 3개 이상은 더 높은 내결함성이 필요한 경우만
   replicas: 2
   selector:
     matchLabels:
@@ -321,46 +324,97 @@ spec:
     metadata:
       labels:
         app: prometheus
+        # Thanos Query가 이 label로 Store API 엔드포인트를 발견
         thanos-store-api: "true"
     spec:
       containers:
+        # ============================================
         # Prometheus Container
+        # ============================================
         - name: prometheus
           image: prom/prometheus:v2.47.0
           args:
             - --config.file=/etc/prometheus/prometheus.yml
             - --storage.tsdb.path=/prometheus
+
+            # [TSDB Retention] 로컬 디스크 보존 기간
+            # Sidecar 업로드 타이밍: 블록이 2h 완료 후 다음 블록 생성 시 업로드
+            # 따라서 데이터 수집 → S3 업로드까지 약 2-4시간 지연 발생
+            # 공식: retention >= 3 * max-block-duration (안전 마진)
+            # 6h = 3 * 2h → Sidecar 장애 시 최소 3블록까지 로컬에서 복구 가능
             - --storage.tsdb.retention.time=6h
+
+            # [Block Duration] TSDB 블록 생성 주기
+            # min = max = 2h로 고정해야 Thanos Sidecar가 예측 가능하게 업로드
+            # 2h는 Prometheus 기본값이자 Thanos 권장값
+            # 더 작은 값(1h)은 업로드 빈도↑, 더 큰 값(4h)은 복구 지연↑
             - --storage.tsdb.min-block-duration=2h
             - --storage.tsdb.max-block-duration=2h
-            - --web.enable-lifecycle
-            - --web.enable-admin-api
+
+            # [Admin API] Sidecar의 reload 호출과 관리 작업에 필요
+            - --web.enable-lifecycle  # /-/reload 엔드포인트 활성화
+            - --web.enable-admin-api  # /api/v1/admin/* 엔드포인트 활성화
           ports:
             - containerPort: 9090
+          # 리소스 가이드라인:
+          # - 메모리: (active_series * 3KB) + (churn_rate * 10KB) + 1GB 오버헤드
+          #   예: 100만 active series, churn 10%/day → ~3.5GB base memory
+          # - CPU: 초당 샘플 수에 비례 (10만 samples/s ≈ 1 core)
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "8Gi"
           volumeMounts:
             - name: prometheus-data
               mountPath: /prometheus
             - name: prometheus-config
               mountPath: /etc/prometheus
 
+        # ============================================
         # Thanos Sidecar Container
+        # ============================================
         - name: thanos-sidecar
           image: quay.io/thanos/thanos:v0.32.0
           args:
             - sidecar
+
+            # Prometheus TSDB 경로 - 블록 읽기 및 업로드에 사용
             - --tsdb.path=/prometheus
+
+            # Prometheus API 주소 - 같은 Pod이므로 localhost 사용
+            # Sidecar가 Prometheus 상태 확인 및 메타데이터 조회에 사용
             - --prometheus.url=http://localhost:9090
+
+            # [gRPC] Store API 엔드포인트 - Query가 이 포트로 데이터 요청
+            # 0.0.0.0 바인딩으로 클러스터 내 모든 IP에서 접근 허용
             - --grpc-address=0.0.0.0:10901
+
+            # [HTTP] 메트릭 및 헬스체크 엔드포인트
             - --http-address=0.0.0.0:10902
+
+            # Object Storage 설정 - S3/GCS/Azure Blob 등 지원
             - --objstore.config-file=/etc/thanos/objstore.yml
           ports:
             - containerPort: 10901
               name: grpc
             - containerPort: 10902
               name: http
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
           volumeMounts:
+            # Prometheus TSDB 볼륨 공유 (읽기 전용)
+            # Sidecar는 완료된 블록을 읽어서 S3로 업로드만 함, TSDB에 쓰지 않음
             - name: prometheus-data
               mountPath: /prometheus
+              readOnly: true
             - name: thanos-objstore-config
               mountPath: /etc/thanos
       volumes:
@@ -377,10 +431,16 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
+            # 스토리지 계산: samples/s * retention_seconds * bytes_per_sample * overhead
+            # Prometheus TSDB 압축 후 약 1.2-1.5 bytes/sample
+            # 예: 100K samples/s * 21600s (6h) * 1.5 bytes * 1.3 (WAL/체크포인트 오버헤드) ≈ 4.2GB
+            # 50Gi는 대부분의 중소규모 클러스터에 충분한 여유 공간
             storage: 50Gi
 ```
 
 ### 5. Thanos Query (Deployment)
+
+Query는 모든 데이터 소스를 집계하는 중앙 게이트웨이입니다. Stateless하므로 Deployment로 배포합니다.
 
 ```yaml
 apiVersion: apps/v1
@@ -389,6 +449,8 @@ metadata:
   name: thanos-query
   namespace: monitoring
 spec:
+  # Query는 stateless → 수평 확장 가능
+  # 부하에 따라 HPA로 자동 스케일링 권장
   replicas: 2
   selector:
     matchLabels:
@@ -403,19 +465,50 @@ spec:
           image: quay.io/thanos/thanos:v0.32.0
           args:
             - query
+
+            # [HTTP] Grafana/API 클라이언트용 PromQL 엔드포인트
+            # Prometheus 호환 API 제공 (/api/v1/query, /api/v1/query_range)
             - --http-address=0.0.0.0:9090
+
+            # [gRPC] 다른 Query 또는 Query Frontend와의 통신용
             - --grpc-address=0.0.0.0:10901
+
+            # [Deduplication] 중복 제거에 사용할 레이블
+            # 같은 메트릭을 수집하는 여러 Prometheus가 있을 때,
+            # 이 레이블 값만 다르면 동일 데이터로 간주하고 하나만 반환
+            # prometheus_replica=prometheus-0, prometheus-1 → 첫 번째 값만 유지
             - --query.replica-label=prometheus_replica
+
+            # [Store Discovery] 데이터 소스 지정 방식
+            # dnssrv+ 프리픽스: DNS SRV 레코드로 동적 디스커버리
+            # _grpc._tcp: SRV 레코드의 서비스명과 프로토콜
+            # Headless Service가 각 Pod의 IP를 SRV 레코드로 반환
+
+            # Sidecar: 최근 2시간 이내 데이터 (아직 S3에 없는 블록)
             - --store=dnssrv+_grpc._tcp.thanos-sidecar.monitoring.svc
+
+            # Store Gateway: S3의 히스토리 데이터 (2시간 이상 지난 블록)
             - --store=dnssrv+_grpc._tcp.thanos-store.monitoring.svc
           ports:
             - containerPort: 9090
               name: http
             - containerPort: 10901
               name: grpc
+          # Query 리소스 가이드라인:
+          # - 메모리: 동시 쿼리 수 * 쿼리당 메모리 (복잡한 쿼리 ~100MB)
+          # - CPU: fan-out 및 결과 병합에 필요
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
 ```
 
 ### 6. Store Gateway (StatefulSet)
+
+Store Gateway는 Object Storage의 블록을 쿼리합니다. 로컬 캐시를 사용하므로 StatefulSet으로 배포합니다.
 
 ```yaml
 apiVersion: apps/v1
@@ -425,6 +518,8 @@ metadata:
   namespace: monitoring
 spec:
   serviceName: thanos-store
+  # Store Gateway 샤딩: 여러 replica가 있으면 블록을 분산 처리
+  # --selector.relabel-config로 샤딩 규칙 설정 가능
   replicas: 2
   selector:
     matchLabels:
@@ -433,6 +528,7 @@ spec:
     metadata:
       labels:
         app: thanos-store
+        # Query가 이 label로 Store API 엔드포인트 발견
         thanos-store-api: "true"
     spec:
       containers:
@@ -440,15 +536,40 @@ spec:
           image: quay.io/thanos/thanos:v0.32.0
           args:
             - store
+
+            # [Local Cache] 블록 인덱스 및 청크 캐시 디렉토리
+            # 자주 조회되는 블록의 인덱스를 로컬에 캐시하여 S3 호출 감소
+            # SSD 스토리지 권장 (IOPS가 쿼리 성능에 직접 영향)
             - --data-dir=/var/thanos/store
+
+            # Object Storage 설정
             - --objstore.config-file=/etc/thanos/objstore.yml
+
+            # [gRPC] Query로부터의 요청 수신
             - --grpc-address=0.0.0.0:10901
+
+            # [HTTP] 메트릭 및 헬스체크
             - --http-address=0.0.0.0:10902
+
+            # [성능 튜닝 옵션 - 프로덕션 권장]
+            # --index-cache-size=1GB          # 인덱스 캐시 크기 (메모리)
+            # --chunk-pool-size=4GB           # 청크 풀 크기 (메모리)
+            # --store.grpc.series-max-concurrency=20  # 동시 series 요청 수
           ports:
             - containerPort: 10901
               name: grpc
             - containerPort: 10902
               name: http
+          # Store Gateway 리소스 가이드라인:
+          # - 메모리: index-cache-size + chunk-pool-size + 오버헤드
+          # - CPU: S3 요청 처리 및 데이터 디코딩
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "4Gi"
           volumeMounts:
             - name: store-cache
               mountPath: /var/thanos/store
@@ -465,12 +586,15 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
+            # 캐시 크기: 자주 조회되는 블록의 인덱스 + 임시 파일
+            # 20Gi면 수백 개 블록의 인덱스 캐시 가능
+            # 더 큰 환경에서는 50-100Gi 권장
             storage: 20Gi
 ```
 
 ### 7. Compactor (Singleton)
 
-Compactor는 반드시 **단일 인스턴스**로 실행해야 합니다.
+Compactor는 블록 압축, 다운샘플링, 보존 정책을 담당합니다. **반드시 단일 인스턴스**로 실행해야 합니다 (여러 개 실행 시 데이터 손상 위험).
 
 ```yaml
 apiVersion: apps/v1
@@ -480,7 +604,10 @@ metadata:
   namespace: monitoring
 spec:
   serviceName: thanos-compactor
-  replicas: 1  # 반드시 1
+  # ⚠️ CRITICAL: 절대로 1 이상으로 설정하지 마세요!
+  # 여러 Compactor가 동시에 같은 블록을 처리하면 데이터 손상 발생
+  # Compactor는 lock 파일로 보호하지만, 완벽하지 않음
+  replicas: 1
   selector:
     matchLabels:
       app: thanos-compactor
@@ -494,14 +621,65 @@ spec:
           image: quay.io/thanos/thanos:v0.32.0
           args:
             - compact
+
+            # [Working Directory] 압축 작업용 임시 디렉토리
+            # 블록을 S3에서 다운로드 → 병합 → 다시 업로드하는 과정에서 사용
+            # 충분한 공간 필요 (최소 가장 큰 블록의 3배)
             - --data-dir=/var/thanos/compact
+
+            # Object Storage 설정
             - --objstore.config-file=/etc/thanos/objstore.yml
+
+            # [HTTP] 메트릭 엔드포인트 (thanos_compact_* 메트릭 노출)
             - --http-address=0.0.0.0:10902
+
+            # [Daemon Mode] 첫 압축 완료 후 계속 실행하며 주기적으로 압축
+            # 이 옵션 없으면 한 번 압축 후 종료 (CronJob 방식)
             - --wait
+
+            # ============================================
+            # [Retention Policy] 해상도별 보존 기간
+            # ============================================
+            # ⚠️ 중요: 다운샘플링은 블록이 최소 40시간 이상 지난 후에만 수행됨
+            # 따라서 raw retention은 최소 40h 이상이어야 다운샘플링 가능
+
+            # Raw 데이터: 원본 해상도 (보통 15s~1m 간격)
+            # 상세 분석 및 디버깅에 필요, 스토리지 비용 가장 높음
+            # 30일 = 약 2.6M 데이터포인트/시계열 (15s 간격 기준)
             - --retention.resolution-raw=30d
+
+            # 5분 다운샘플: Raw 데이터의 min/max/sum/count 집계
+            # 일반 대시보드 및 알림에 충분한 해상도
+            # 60일 = 약 17K 데이터포인트/시계열
             - --retention.resolution-5m=60d
+
+            # 1시간 다운샘플: 장기 트렌드 분석용
+            # 연간 용량 계획, 비용 분석 등에 사용
+            # 1년 = 약 8.7K 데이터포인트/시계열
             - --retention.resolution-1h=1y
+
+            # ============================================
+            # [Downsampling] 다운샘플링 동시성
+            # ============================================
+            # CPU 코어 수에 맞게 조정 (너무 높으면 메모리 부족)
+            # 4 = 동시에 4개 블록을 다운샘플링
             - --downsample.concurrency=4
+
+            # [추가 권장 옵션]
+            # --compact.concurrency=1            # 압축 동시성 (기본 1)
+            # --delete-delay=48h                 # 삭제 전 대기 시간 (복구용)
+            # --compact.cleanup-interval=5m     # 임시 파일 정리 주기
+          # Compactor 리소스 가이드라인:
+          # - 메모리: 블록 크기에 비례 (큰 블록 압축 시 최대 4-8GB)
+          # - CPU: 다운샘플링 및 압축은 CPU 집약적
+          # - 디스크 I/O: 블록 읽기/쓰기가 빈번하므로 SSD 권장
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "8Gi"
           volumeMounts:
             - name: compact-data
               mountPath: /var/thanos/compact
@@ -518,6 +696,9 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
+            # 작업 공간 계산: 가장 큰 블록 * 3 (다운로드+작업+업로드)
+            # 예: 2시간 블록이 10GB라면 최소 30GB 필요
+            # 100Gi는 대부분의 환경에서 충분한 여유 공간 제공
             storage: 100Gi
 ```
 
