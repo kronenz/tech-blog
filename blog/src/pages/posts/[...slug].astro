@@ -1,4 +1,7 @@
 ---
+// 정적 생성 (MDX 포스트용 - DB 포스트는 별도 SSR 페이지에서 처리)
+export const prerender = true;
+
 import { getCollection, type CollectionEntry } from 'astro:content';
 import PostLayout from '../../layouts/PostLayout.astro';
 

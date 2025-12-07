@@ -40,3 +40,10 @@ coverage/
 
 # Astro
 .astro/
+
+# Playwright
+blog/playwright-report/
+blog/test-results/
+
+# Local database
+blog/local.db

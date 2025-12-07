@@ -10,7 +10,7 @@ import remarkAnimflow from './src/plugins/remark-animflow';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://tech-blog.example.com',
-  output: 'static',
+  output: 'server', // SSR 모드 (개별 페이지에서 prerender: true로 정적 생성)
   adapter: vercel({
     webAnalytics: {
       enabled: true,
