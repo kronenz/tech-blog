@@ -1,6 +1,13 @@
 # @animflow/core
 
+**Declarative Animated Diagram DSL Engine**
+
+[![npm version](https://img.shields.io/npm/v/@animflow/core.svg)](https://www.npmjs.com/package/@animflow/core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 AnimFlow DSL Engine - 선언적 다이어그램 시각화 및 애니메이션 라이브러리
+
+**[Live Demo](https://tech-blog-woad-ten.vercel.app/posts/animflow-demo)** | [Documentation](../../README.md) | [Examples](https://tech-blog-woad-ten.vercel.app/)
 
 ## 설치
 
