@@ -133,7 +133,7 @@
         "style": {
           "type": "object",
           "properties": {
-            "background": { "$ref": "#/definitions/hexColor" },
+            "background": { "$ref": "#/definitions/cssColor" },
             "labelColor": { "$ref": "#/definitions/hexColor" }
           },
           "additionalProperties": false
@@ -671,6 +671,11 @@
       "type": "string",
       "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$",
       "description": "Hex color code (#RGB or #RRGGBB)"
+    },
+    "cssColor": {
+      "type": "string",
+      "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|rgba?\\(\\s*\\d+\\s*,\\s*\\d+\\s*,\\s*\\d+\\s*(,\\s*[\\d.]+)?\\s*\\))$",
+      "description": "CSS color value (hex, rgb, or rgba)"
     },
     "layout": {
       "type": "object",

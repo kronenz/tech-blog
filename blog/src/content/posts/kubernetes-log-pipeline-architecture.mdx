@@ -1,0 +1,1129 @@
+---
+title: "Kubernetes 로그 파이프라인 아키텍처: Fluent Bit, Data Prepper, OpenSearch 심층 분석"
+pubDate: 2025-12-08
+description: "대규모 Kubernetes 환경에서 Fluent Bit, Data Prepper, OpenSearch를 활용한 로그 파이프라인의 설계 원칙과 최적화 전략"
+tags: ["kubernetes", "observability", "fluent-bit", "opensearch", "data-prepper", "logging", "architecture"]
+---
+
+import AnimFlowEmbed from '../../components/AnimFlowEmbed.astro';
+
+# Kubernetes 로그 파이프라인 아키텍처: Fluent Bit, Data Prepper, OpenSearch 심층 분석
+
+대규모 Kubernetes 클러스터를 운영하다 보면 로그 관리가 가장 까다로운 과제 중 하나로 떠오릅니다. 수백 개의 Pod에서 초당 수만 줄의 로그가 생성되고, 이를 효율적으로 수집, 처리, 저장해야 합니다.
+
+이 글에서는 **Fluent Bit → Data Prepper → OpenSearch** 파이프라인의 각 컴포넌트가 왜 그 위치에 있어야 하는지, 그리고 각각이 어떤 공학적 결정을 통해 설계되었는지 깊이 있게 살펴보겠습니다.
+
+## 로그 파이프라인의 전체 구조
+
+먼저 전체 아키텍처를 시각적으로 이해해봅시다:
+
+<AnimFlowEmbed
+  id="log-pipeline-overview"
+  title="Kubernetes 로그 파이프라인 아키텍처"
+  height={450}
+  yaml={`
+version: "1.0"
+metadata:
+  title: "Log Pipeline Architecture"
+canvas:
+  width: 950
+  height: 400
+  sections:
+    - id: node-layer
+      label: "Node Layer (DaemonSet)"
+      bounds: { y: 0, height: 150 }
+      style:
+        background: "rgba(59, 130, 246, 0.1)"
+    - id: aggregation-layer
+      label: "Aggregation Layer"
+      bounds: { y: 150, height: 120 }
+      style:
+        background: "rgba(16, 185, 129, 0.1)"
+    - id: storage-layer
+      label: "Storage Layer"
+      bounds: { y: 270, height: 130 }
+      style:
+        background: "rgba(245, 158, 11, 0.1)"
+nodes:
+  - id: pod1
+    type: box
+    label: "Pod A"
+    position: { x: 80, y: 50 }
+    style:
+      color: "#6366f1"
+  - id: pod2
+    type: box
+    label: "Pod B"
+    position: { x: 200, y: 50 }
+    style:
+      color: "#6366f1"
+  - id: pod3
+    type: box
+    label: "Pod C"
+    position: { x: 320, y: 50 }
+    style:
+      color: "#6366f1"
+  - id: fluentbit1
+    type: box
+    label: "Fluent Bit\\n(Node 1)"
+    position: { x: 140, y: 50 }
+    style:
+      color: "#3b82f6"
+  - id: fluentbit2
+    type: box
+    label: "Fluent Bit\\n(Node 2)"
+    position: { x: 320, y: 50 }
+    style:
+      color: "#3b82f6"
+  - id: kafka
+    type: box
+    label: "Kafka\\n(Buffer)"
+    position: { x: 500, y: 50 }
+    style:
+      color: "#000000"
+  - id: dataprepper
+    type: box
+    label: "Data Prepper\\n(Processing)"
+    position: { x: 500, y: 195 }
+    style:
+      color: "#10b981"
+  - id: opensearch
+    type: database
+    label: "OpenSearch\\nCluster"
+    position: { x: 500, y: 315 }
+    style:
+      color: "#005EB8"
+  - id: dashboards
+    type: box
+    label: "OpenSearch\\nDashboards"
+    position: { x: 720, y: 315 }
+    style:
+      color: "#005EB8"
+edges:
+  - id: e1
+    from: pod1
+    to: fluentbit1
+  - id: e2
+    from: pod2
+    to: fluentbit1
+  - id: e3
+    from: pod3
+    to: fluentbit2
+  - id: e4
+    from: fluentbit1
+    to: kafka
+  - id: e5
+    from: fluentbit2
+    to: kafka
+  - id: e6
+    from: kafka
+    to: dataprepper
+  - id: e7
+    from: dataprepper
+    to: opensearch
+  - id: e8
+    from: opensearch
+    to: dashboards
+    style:
+      lineType: dashed
+scenarios:
+  - id: log-flow
+    name: "로그 흐름 시뮬레이션"
+    steps:
+      - action: highlight
+        nodes: [pod1, pod2, pod3]
+        log:
+          message: "1. 각 Pod에서 stdout/stderr로 로그 출력"
+          type: info
+        duration: 1500
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: e1
+            duration: 400
+          - action: animate-edge
+            edge: e2
+            duration: 400
+          - action: animate-edge
+            edge: e3
+            duration: 400
+      - action: highlight
+        nodes: [fluentbit1, fluentbit2]
+        log:
+          message: "2. Fluent Bit: 로그 수집 및 경량 파싱 (DaemonSet)"
+          type: info
+        duration: 1500
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: e4
+            duration: 500
+          - action: animate-edge
+            edge: e5
+            duration: 500
+      - action: highlight
+        nodes: [kafka]
+        log:
+          message: "3. Kafka: 버퍼링 및 백프레셔 흡수"
+          type: info
+        duration: 1200
+      - action: animate-edge
+        edge: e6
+        duration: 500
+      - action: highlight
+        nodes: [dataprepper]
+        log:
+          message: "4. Data Prepper: 복잡한 변환, 집계, 라우팅"
+          type: info
+        duration: 1500
+      - action: animate-edge
+        edge: e7
+        duration: 500
+      - action: highlight
+        nodes: [opensearch]
+        log:
+          message: "5. OpenSearch: 인덱싱 및 저장"
+          type: success
+        duration: 1200
+      - action: animate-edge
+        edge: e8
+        duration: 400
+      - action: highlight
+        nodes: [dashboards]
+        log:
+          message: "6. Dashboards: 시각화 및 분석"
+          type: success
+        duration: 1000
+logging:
+  enabled: true
+  maxEntries: 6
+`}
+/>
+
+---
+
+## Fluent Bit: 왜 DaemonSet인가?
+
+### 노드 로컬 수집의 필요성
+
+Kubernetes에서 컨테이너 로그는 기본적으로 각 노드의 `/var/log/containers/` 디렉토리에 JSON 형식으로 저장됩니다. 이 설계 결정의 배경을 이해하면 Fluent Bit가 왜 DaemonSet으로 배포되어야 하는지 명확해집니다.
+
+**컨테이너 런타임의 로그 처리 방식:**
+
+containerd나 CRI-O와 같은 컨테이너 런타임은 컨테이너의 stdout/stderr 출력을 캡처하여 노드의 로컬 파일시스템에 기록합니다. 이 로그 파일은 다음과 같은 경로 규칙을 따릅니다:
+
+```
+/var/log/containers/<pod-name>_<namespace>_<container-name>-<container-id>.log
+```
+
+각 파일은 다시 `/var/log/pods/` 디렉토리의 실제 로그 파일로 심볼릭 링크됩니다. 이 구조는 kubelet이 로그 로테이션을 관리할 수 있게 해주며, 동시에 로그 수집기가 메타데이터(Pod 이름, 네임스페이스 등)를 파일 경로에서 추출할 수 있게 합니다.
+
+### Fluent Bit의 메모리 효율성
+
+Fluent Bit가 Fluentd 대신 선호되는 이유는 **메모리 풋프린트**에 있습니다. 일반적인 환경에서:
+
+| 메트릭 | Fluent Bit | Fluentd |
+|--------|------------|---------|
+| 기본 메모리 사용량 | ~15MB | ~60MB |
+| 1만 EPS 처리 시 | ~50MB | ~200MB |
+| 바이너리 크기 | ~2MB | ~50MB (Ruby 런타임 포함) |
+
+이 차이는 DaemonSet으로 배포할 때 클러스터 전체에서 기하급수적으로 증폭됩니다. 100개 노드 클러스터에서 Fluent Bit를 사용하면 Fluentd 대비 **약 15GB의 메모리를 절약**할 수 있습니다.
+
+<AnimFlowEmbed
+  id="fluentbit-internals"
+  title="Fluent Bit 내부 동작"
+  height={380}
+  yaml={`
+version: "1.0"
+metadata:
+  title: "Fluent Bit Internal Architecture"
+nodes:
+  - id: input
+    type: box
+    label: "Input Plugin\\n(tail)"
+    position: { x: 80, y: 160 }
+    style:
+      color: "#3b82f6"
+  - id: parser
+    type: box
+    label: "Parser\\n(JSON/Regex)"
+    position: { x: 240, y: 160 }
+    style:
+      color: "#8b5cf6"
+  - id: filter
+    type: box
+    label: "Filter\\n(kubernetes)"
+    position: { x: 400, y: 160 }
+    style:
+      color: "#f59e0b"
+  - id: buffer
+    type: box
+    label: "Memory\\nBuffer"
+    position: { x: 560, y: 160 }
+    style:
+      color: "#10b981"
+  - id: output
+    type: box
+    label: "Output Plugin\\n(kafka/http)"
+    position: { x: 720, y: 160 }
+    style:
+      color: "#ef4444"
+edges:
+  - id: e1
+    from: input
+    to: parser
+    label: "raw logs"
+  - id: e2
+    from: parser
+    to: filter
+    label: "structured"
+  - id: e3
+    from: filter
+    to: buffer
+    label: "enriched"
+  - id: e4
+    from: buffer
+    to: output
+    label: "batched"
+scenarios:
+  - id: processing
+    name: "로그 처리 흐름"
+    steps:
+      - action: highlight
+        nodes: [input]
+        log:
+          message: "tail 플러그인: 로그 파일 변경 감지 (inotify)"
+          type: info
+        duration: 1500
+      - action: animate-edge
+        edge: e1
+        label: "raw line"
+        duration: 500
+      - action: highlight
+        nodes: [parser]
+        log:
+          message: "Parser: JSON 또는 정규식으로 필드 추출"
+          type: info
+        duration: 1500
+      - action: animate-edge
+        edge: e2
+        duration: 500
+      - action: highlight
+        nodes: [filter]
+        log:
+          message: "kubernetes 필터: Pod 메타데이터 enrichment"
+          type: info
+        duration: 1500
+      - action: animate-edge
+        edge: e3
+        duration: 500
+      - action: highlight
+        nodes: [buffer]
+        log:
+          message: "메모리 버퍼: 배치 집계 및 백프레셔 흡수"
+          type: info
+        duration: 1500
+      - action: animate-edge
+        edge: e4
+        duration: 500
+      - action: highlight
+        nodes: [output]
+        log:
+          message: "Output: 압축 후 다운스트림으로 전송"
+          type: success
+        duration: 1200
+logging:
+  enabled: true
+  maxEntries: 5
+`}
+/>
+
+### Kubernetes 메타데이터 Enrichment의 비용
+
+Fluent Bit의 `kubernetes` 필터는 각 로그 레코드에 Pod, Namespace, Label, Annotation 정보를 추가합니다. 이 과정에서 **Kubernetes API 서버에 대한 요청**이 발생하는데, 이를 최적화하지 않으면 API 서버에 상당한 부하를 줄 수 있습니다.
+
+**캐싱 메커니즘:**
+
+Fluent Bit는 내부적으로 Pod 메타데이터를 캐시합니다. 캐시 TTL(기본 15분)과 캐시 크기를 적절히 조정해야 합니다:
+
+- **캐시 TTL이 너무 짧으면**: API 서버 요청 증가
+- **캐시 TTL이 너무 길면**: Pod 재생성 시 잘못된 메타데이터 참조
+- **캐시 크기가 작으면**: 빈번한 eviction으로 API 요청 증가
+
+대규모 클러스터(1000+ Pod)에서는 **Watch 메커니즘**을 활성화하여 API 서버로부터 변경 사항을 스트리밍으로 받는 것이 효율적입니다. 이는 폴링 방식 대비 API 서버 부하를 90% 이상 줄일 수 있습니다.
+
+---
+
+## 왜 Kafka를 중간에 두는가?
+
+### 버퍼링의 공학적 필요성
+
+로그 파이프라인에서 Kafka의 역할을 이해하려면 **생산자와 소비자 간의 속도 불일치** 문제를 먼저 이해해야 합니다.
+
+<AnimFlowEmbed
+  id="backpressure-scenario"
+  title="백프레셔 시나리오"
+  height={400}
+  yaml={`
+version: "1.0"
+metadata:
+  title: "Backpressure Handling"
+nodes:
+  - id: apps
+    type: box
+    label: "Applications\\n(Variable Load)"
+    position: { x: 100, y: 80 }
+    style:
+      color: "#6366f1"
+  - id: fluentbit
+    type: box
+    label: "Fluent Bit"
+    position: { x: 100, y: 200 }
+    style:
+      color: "#3b82f6"
+  - id: kafka
+    type: box
+    label: "Kafka\\n(Absorbs Spikes)"
+    position: { x: 350, y: 200 }
+    style:
+      color: "#000000"
+  - id: dataprepper
+    type: box
+    label: "Data Prepper\\n(Constant Rate)"
+    position: { x: 600, y: 200 }
+    style:
+      color: "#10b981"
+  - id: opensearch
+    type: database
+    label: "OpenSearch"
+    position: { x: 600, y: 320 }
+    style:
+      color: "#005EB8"
+edges:
+  - id: e1
+    from: apps
+    to: fluentbit
+  - id: e2
+    from: fluentbit
+    to: kafka
+  - id: e3
+    from: kafka
+    to: dataprepper
+  - id: e4
+    from: dataprepper
+    to: opensearch
+scenarios:
+  - id: normal
+    name: "정상 상태"
+    steps:
+      - action: highlight
+        nodes: [apps]
+        log:
+          message: "정상: 10,000 EPS 로그 생성"
+          type: info
+        duration: 1000
+      - action: animate-edge
+        edge: e1
+        duration: 400
+      - action: animate-edge
+        edge: e2
+        label: "10K EPS"
+        duration: 400
+      - action: highlight
+        nodes: [kafka]
+        log:
+          message: "Kafka: 메시지 즉시 소비됨"
+          type: info
+        duration: 1000
+      - action: animate-edge
+        edge: e3
+        label: "10K EPS"
+        duration: 400
+      - action: animate-edge
+        edge: e4
+        duration: 400
+      - action: highlight
+        nodes: [opensearch]
+        log:
+          message: "OpenSearch: 정상 인덱싱"
+          type: success
+        duration: 1000
+  - id: spike
+    name: "트래픽 스파이크"
+    steps:
+      - action: highlight
+        nodes: [apps]
+        style:
+          color: "#ef4444"
+        log:
+          message: "스파이크! 100,000 EPS 로그 폭주"
+          type: warning
+        duration: 1200
+      - action: animate-edge
+        edge: e1
+        duration: 300
+      - action: animate-edge
+        edge: e2
+        label: "100K EPS"
+        duration: 300
+      - action: highlight
+        nodes: [kafka]
+        style:
+          color: "#f59e0b"
+        log:
+          message: "Kafka: 버퍼에 메시지 누적 (Consumer Lag 증가)"
+          type: warning
+        duration: 1500
+      - action: animate-edge
+        edge: e3
+        label: "15K EPS"
+        duration: 500
+      - action: highlight
+        nodes: [dataprepper]
+        log:
+          message: "Data Prepper: 일정 속도로 처리 유지"
+          type: info
+        duration: 1200
+      - action: animate-edge
+        edge: e4
+        duration: 400
+      - action: highlight
+        nodes: [opensearch]
+        log:
+          message: "OpenSearch: 과부하 없이 안정적 인덱싱"
+          type: success
+        duration: 1000
+logging:
+  enabled: true
+  maxEntries: 6
+`}
+/>
+
+**시나리오 드롭다운**에서 "정상 상태"와 "트래픽 스파이크"를 비교해보세요.
+
+### Kafka 없이 발생하는 문제
+
+Kafka 없이 Fluent Bit에서 직접 OpenSearch로 전송하면 다음 문제들이 발생합니다:
+
+1. **OpenSearch 과부하 시 로그 유실**: OpenSearch가 느려지거나 다운되면 Fluent Bit의 메모리 버퍼가 가득 차고, 새로운 로그는 드롭됩니다.
+
+2. **재시도 폭풍(Retry Storm)**: 일시적 장애 후 복구 시 모든 Fluent Bit 인스턴스가 동시에 재시도하면서 OpenSearch에 더 큰 부하를 줍니다.
+
+3. **배치 최적화 한계**: Fluent Bit는 경량화를 위해 복잡한 배치 최적화를 수행하지 않습니다. OpenSearch의 최적 bulk 크기(5-15MB)에 맞추기 어렵습니다.
+
+### Kafka의 파티셔닝 전략
+
+로그 파이프라인에서 Kafka 파티셔닝은 신중하게 설계해야 합니다:
+
+| 파티션 키 | 장점 | 단점 |
+|-----------|------|------|
+| Pod Name | 같은 Pod 로그가 순서 보장 | Hot partition 가능 (로그 많은 Pod) |
+| Namespace | 네임스페이스별 격리 | 네임스페이스 간 불균형 |
+| Round-robin | 균등 분산 | 순서 보장 없음 |
+| Timestamp 기반 | 시간 순서 보장 | 파티션 핫스팟 |
+
+대부분의 환경에서는 **Namespace + Pod Name의 해시**를 파티션 키로 사용하는 것이 균형 잡힌 선택입니다. 이는 같은 Pod의 로그 순서를 보장하면서도 합리적인 분산을 달성합니다.
+
+---
+
+## Data Prepper: 단순 전달을 넘어선 처리
+
+### 왜 별도의 처리 계층이 필요한가?
+
+Fluent Bit에서 직접 OpenSearch로 보내지 않고 Data Prepper를 경유하는 이유는 **관심사의 분리(Separation of Concerns)** 원칙에 있습니다.
+
+<AnimFlowEmbed
+  id="data-prepper-pipeline"
+  title="Data Prepper 파이프라인"
+  height={420}
+  yaml={`
+version: "1.0"
+metadata:
+  title: "Data Prepper Processing Pipeline"
+nodes:
+  - id: source
+    type: box
+    label: "Kafka Source"
+    position: { x: 80, y: 180 }
+    style:
+      color: "#000000"
+  - id: grok
+    type: box
+    label: "Grok\\nProcessor"
+    position: { x: 220, y: 100 }
+    style:
+      color: "#8b5cf6"
+  - id: mutate
+    type: box
+    label: "Mutate\\nProcessor"
+    position: { x: 220, y: 260 }
+    style:
+      color: "#8b5cf6"
+  - id: aggregate
+    type: box
+    label: "Aggregate\\nProcessor"
+    position: { x: 380, y: 100 }
+    style:
+      color: "#f59e0b"
+  - id: date
+    type: box
+    label: "Date\\nProcessor"
+    position: { x: 380, y: 260 }
+    style:
+      color: "#f59e0b"
+  - id: router
+    type: box
+    label: "Conditional\\nRouter"
+    position: { x: 540, y: 180 }
+    style:
+      color: "#10b981"
+  - id: sink-hot
+    type: database
+    label: "OpenSearch\\n(Hot Tier)"
+    position: { x: 700, y: 100 }
+    style:
+      color: "#ef4444"
+  - id: sink-warm
+    type: database
+    label: "OpenSearch\\n(Warm Tier)"
+    position: { x: 700, y: 260 }
+    style:
+      color: "#3b82f6"
+edges:
+  - id: e1
+    from: source
+    to: grok
+  - id: e2
+    from: source
+    to: mutate
+  - id: e3
+    from: grok
+    to: aggregate
+  - id: e4
+    from: mutate
+    to: date
+  - id: e5
+    from: aggregate
+    to: router
+  - id: e6
+    from: date
+    to: router
+  - id: e7
+    from: router
+    to: sink-hot
+  - id: e8
+    from: router
+    to: sink-warm
+    style:
+      lineType: dashed
+scenarios:
+  - id: pipeline
+    name: "파이프라인 처리"
+    steps:
+      - action: highlight
+        nodes: [source]
+        log:
+          message: "Kafka에서 로그 배치 소비"
+          type: info
+        duration: 1000
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: e1
+            duration: 400
+          - action: animate-edge
+            edge: e2
+            duration: 400
+      - action: highlight
+        nodes: [grok, mutate]
+        log:
+          message: "Grok: 비정형 로그 파싱 / Mutate: 필드 변환"
+          type: info
+        duration: 1500
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: e3
+            duration: 400
+          - action: animate-edge
+            edge: e4
+            duration: 400
+      - action: highlight
+        nodes: [aggregate, date]
+        log:
+          message: "Aggregate: 메트릭 집계 / Date: 타임스탬프 정규화"
+          type: info
+        duration: 1500
+      - action: parallel
+        steps:
+          - action: animate-edge
+            edge: e5
+            duration: 400
+          - action: animate-edge
+            edge: e6
+            duration: 400
+      - action: highlight
+        nodes: [router]
+        log:
+          message: "Router: 조건부 라우팅 (severity, namespace 기반)"
+          type: info
+        duration: 1200
+      - action: animate-edge
+        edge: e7
+        label: "ERROR, WARN"
+        duration: 500
+      - action: highlight
+        nodes: [sink-hot]
+        log:
+          message: "Hot Tier: 빠른 SSD, 짧은 보존기간"
+          type: success
+        duration: 1000
+      - action: animate-edge
+        edge: e8
+        label: "INFO, DEBUG"
+        duration: 500
+      - action: highlight
+        nodes: [sink-warm]
+        log:
+          message: "Warm Tier: HDD, 긴 보존기간"
+          type: success
+        duration: 1000
+logging:
+  enabled: true
+  maxEntries: 6
+`}
+/>
+
+### Grok 패턴과 성능 트레이드오프
+
+Grok 프로세서는 정규표현식 기반으로 비정형 로그를 구조화합니다. 그러나 복잡한 Grok 패턴은 상당한 CPU 비용을 수반합니다.
+
+**패턴 복잡도에 따른 성능 영향:**
+
+| 패턴 유형 | 처리량 (EPS) | CPU 사용률 |
+|-----------|--------------|------------|
+| 단순 (3개 필드) | 50,000 | 15% |
+| 중간 (10개 필드) | 25,000 | 35% |
+| 복잡 (20개 필드 + 조건부) | 8,000 | 70% |
+
+**최적화 전략:**
+
+1. **사전 필터링**: Grok 처리 전에 불필요한 로그를 제거합니다. DEBUG 레벨 로그가 80%라면, 이를 먼저 필터링하는 것만으로 처리량이 5배 증가합니다.
+
+2. **앵커 사용**: 정규표현식에 `^`(시작)와 `$`(끝) 앵커를 사용하면 백트래킹을 줄여 성능이 향상됩니다.
+
+3. **캡처 그룹 최소화**: 필요 없는 필드는 캡처하지 않습니다. `(?:...)` 비캡처 그룹을 활용합니다.
+
+### 집계(Aggregation)의 가치
+
+Data Prepper의 집계 프로세서는 시간 윈도우 기반으로 로그를 그룹화하고 통계를 계산합니다. 이는 **저장 비용 절감**과 **쿼리 성능 향상**에 직접적인 영향을 줍니다.
+
+**예시: HTTP 액세스 로그 집계**
+
+개별 요청 로그를 그대로 저장하면:
+- 1분에 100,000개 문서 생성
+- 초당 쿼리 시 1분치 10만 개 문서 스캔
+
+5초 윈도우로 집계하면:
+- 1분에 12개 문서 생성 (상태코드 × 엔드포인트 조합)
+- 저장 용량 99.99% 절감
+- 쿼리 속도 1000배 향상
+
+---
+
+## OpenSearch: 인덱싱 전략의 깊은 이해
+
+### 시간 기반 인덱싱의 필요성
+
+로그 데이터는 **시간 기반으로 인덱스를 분할**하는 것이 표준 패턴입니다. 이유는 다음과 같습니다:
+
+<AnimFlowEmbed
+  id="index-lifecycle"
+  title="인덱스 생명주기 관리"
+  height={380}
+  yaml={`
+version: "1.0"
+metadata:
+  title: "Index Lifecycle Management"
+nodes:
+  - id: write
+    type: box
+    label: "logs-2025.12.08\\n(Write Index)"
+    position: { x: 100, y: 160 }
+    style:
+      color: "#ef4444"
+  - id: hot
+    type: box
+    label: "Hot Tier\\n(SSD)"
+    position: { x: 280, y: 80 }
+    style:
+      color: "#f59e0b"
+  - id: warm
+    type: box
+    label: "Warm Tier\\n(HDD)"
+    position: { x: 460, y: 80 }
+    style:
+      color: "#3b82f6"
+  - id: cold
+    type: box
+    label: "Cold Tier\\n(Object Storage)"
+    position: { x: 640, y: 80 }
+    style:
+      color: "#6366f1"
+  - id: delete
+    type: box
+    label: "Delete"
+    position: { x: 640, y: 240 }
+    style:
+      color: "#9ca3af"
+  - id: search
+    type: box
+    label: "Search\\nRequests"
+    position: { x: 280, y: 240 }
+    style:
+      color: "#10b981"
+edges:
+  - id: e1
+    from: write
+    to: hot
+    label: "real-time"
+  - id: e2
+    from: hot
+    to: warm
+    label: "1 day"
+  - id: e3
+    from: warm
+    to: cold
+    label: "7 days"
+  - id: e4
+    from: cold
+    to: delete
+    label: "30 days"
+  - id: e5
+    from: search
+    to: hot
+    style:
+      lineType: dashed
+  - id: e6
+    from: search
+    to: warm
+    style:
+      lineType: dashed
+scenarios:
+  - id: lifecycle
+    name: "생명주기 흐름"
+    steps:
+      - action: highlight
+        nodes: [write]
+        log:
+          message: "새 로그가 현재 Write Index에 기록됨"
+          type: info
+        duration: 1200
+      - action: animate-edge
+        edge: e1
+        duration: 500
+      - action: highlight
+        nodes: [hot]
+        log:
+          message: "Hot Tier: 1 replica, 빠른 SSD, 실시간 검색"
+          type: info
+        duration: 1500
+      - action: animate-edge
+        edge: e2
+        label: "rollover"
+        duration: 500
+      - action: highlight
+        nodes: [warm]
+        log:
+          message: "Warm Tier: force merge, read-only, 0 replica"
+          type: info
+        duration: 1500
+      - action: animate-edge
+        edge: e3
+        label: "shrink"
+        duration: 500
+      - action: highlight
+        nodes: [cold]
+        log:
+          message: "Cold Tier: snapshot to S3, 필요 시 복원"
+          type: info
+        duration: 1500
+      - action: animate-edge
+        edge: e4
+        duration: 400
+      - action: highlight
+        nodes: [delete]
+        log:
+          message: "보존 기간 만료 후 삭제"
+          type: warning
+        duration: 1000
+logging:
+  enabled: true
+  maxEntries: 6
+`}
+/>
+
+### 샤드 설계의 수학
+
+OpenSearch에서 샤드 수 결정은 단순하지 않습니다. 다음 공식으로 접근합니다:
+
+**일일 데이터 볼륨 계산:**
+```
+일일 EPS × 평균 로그 크기 × 86,400초 = 일일 원본 크기
+일일 원본 크기 × 1.1 (인덱싱 오버헤드) = 일일 인덱스 크기
+```
+
+**샤드 수 결정:**
+```
+Primary 샤드 수 = ceil(일일 인덱스 크기 / 50GB)
+```
+
+50GB는 OpenSearch 권장 샤드 최대 크기입니다. 이보다 크면:
+- 복구 시간 증가
+- 리밸런싱 비용 증가
+- 검색 성능 저하
+
+**실제 예시:**
+- 일일 10억 로그
+- 평균 로그 크기 500바이트
+- 일일 데이터: 500GB
+- 권장 Primary 샤드: 10개
+- Replica 포함(1): 20개 샤드
+
+### 매핑 최적화
+
+로그 필드의 데이터 타입 선택은 저장 공간과 쿼리 성능에 직접적인 영향을 미칩니다:
+
+| 필드 유형 | 권장 타입 | 이유 |
+|-----------|-----------|------|
+| timestamp | date | 범위 쿼리 최적화 |
+| log level | keyword | 정확 매치, 집계에 효율적 |
+| message | text + keyword | 전문 검색 + 정확 매치 |
+| trace_id | keyword | 집계 불필요, 정확 매치만 |
+| numeric metrics | scaled_float | 정수 저장으로 공간 절약 |
+| IP address | ip | CIDR 범위 쿼리 지원 |
+
+**`doc_values` 비활성화:**
+
+집계나 정렬에 사용되지 않는 text 필드는 `doc_values: false`로 설정하여 디스크 사용량을 30-50% 절감할 수 있습니다.
+
+---
+
+## 장애 시나리오와 복원력
+
+### 각 계층별 장애 대응
+
+<AnimFlowEmbed
+  id="failure-scenarios"
+  title="장애 시나리오 대응"
+  height={450}
+  yaml={`
+version: "1.0"
+metadata:
+  title: "Failure Scenarios"
+canvas:
+  width: 900
+  height: 400
+nodes:
+  - id: app
+    type: box
+    label: "Application"
+    position: { x: 80, y: 180 }
+    style:
+      color: "#6366f1"
+  - id: fluentbit
+    type: box
+    label: "Fluent Bit"
+    position: { x: 220, y: 180 }
+    style:
+      color: "#3b82f6"
+  - id: kafka
+    type: box
+    label: "Kafka"
+    position: { x: 380, y: 180 }
+    style:
+      color: "#000000"
+  - id: dataprepper
+    type: box
+    label: "Data Prepper"
+    position: { x: 540, y: 180 }
+    style:
+      color: "#10b981"
+  - id: opensearch
+    type: database
+    label: "OpenSearch"
+    position: { x: 700, y: 180 }
+    style:
+      color: "#005EB8"
+edges:
+  - id: e1
+    from: app
+    to: fluentbit
+  - id: e2
+    from: fluentbit
+    to: kafka
+  - id: e3
+    from: kafka
+    to: dataprepper
+  - id: e4
+    from: dataprepper
+    to: opensearch
+scenarios:
+  - id: opensearch-down
+    name: "OpenSearch 장애"
+    steps:
+      - action: highlight
+        nodes: [opensearch]
+        style:
+          color: "#ef4444"
+        log:
+          message: "OpenSearch 클러스터 장애 발생!"
+          type: error
+        duration: 1500
+      - action: highlight
+        nodes: [dataprepper]
+        log:
+          message: "Data Prepper: 전송 실패, 재시도 시작"
+          type: warning
+        duration: 1200
+      - action: highlight
+        nodes: [kafka]
+        style:
+          color: "#f59e0b"
+        log:
+          message: "Kafka: Consumer Lag 증가, 메시지 안전하게 보존"
+          type: warning
+        duration: 1500
+      - action: highlight
+        nodes: [fluentbit]
+        log:
+          message: "Fluent Bit: Kafka로 정상 전송 (영향 없음)"
+          type: info
+        duration: 1200
+      - action: highlight
+        nodes: [app]
+        log:
+          message: "Application: 로그 출력 정상 (영향 없음)"
+          type: success
+        duration: 1000
+  - id: kafka-down
+    name: "Kafka 장애"
+    steps:
+      - action: highlight
+        nodes: [kafka]
+        style:
+          color: "#ef4444"
+        log:
+          message: "Kafka 브로커 장애 발생!"
+          type: error
+        duration: 1500
+      - action: highlight
+        nodes: [fluentbit]
+        style:
+          color: "#f59e0b"
+        log:
+          message: "Fluent Bit: 메모리 버퍼에 로그 보관"
+          type: warning
+        duration: 1200
+      - action: highlight
+        nodes: [fluentbit]
+        log:
+          message: "버퍼 용량 도달 시 filesystem 버퍼 사용"
+          type: warning
+        duration: 1200
+      - action: highlight
+        nodes: [app]
+        log:
+          message: "Application: 로그 출력 정상 (영향 없음)"
+          type: success
+        duration: 1000
+      - action: highlight
+        nodes: [kafka]
+        style:
+          color: "#10b981"
+        log:
+          message: "Kafka 복구 → Fluent Bit 버퍼 자동 플러시"
+          type: success
+        duration: 1500
+logging:
+  enabled: true
+  maxEntries: 6
+`}
+/>
+
+### 데이터 유실 방지 체크리스트
+
+각 컴포넌트별로 데이터 유실을 방지하기 위한 설정:
+
+**Fluent Bit:**
+- `storage.type`: `filesystem` (메모리 + 디스크 버퍼)
+- `storage.path`: 영구 볼륨 마운트
+- `storage.backlog.mem_limit`: 메모리 한도 설정
+- `Retry_Limit`: False (무한 재시도) 또는 높은 값
+
+**Kafka:**
+- `acks`: `all` (모든 ISR 확인)
+- `min.insync.replicas`: 2 이상
+- `replication.factor`: 3
+- `unclean.leader.election.enable`: false
+
+**Data Prepper:**
+- `acknowledgments`: true (Kafka offset 커밋 제어)
+- `buffer`: 적절한 크기 설정
+- 재시도 정책: 지수 백오프
+
+---
+
+## 성능 튜닝 체크리스트
+
+### Fluent Bit
+
+| 설정 | 기본값 | 권장값 | 설명 |
+|------|--------|--------|------|
+| `Mem_Buf_Limit` | 5MB | 50-100MB | 버퍼 크기 증가 |
+| `Refresh_Interval` | 60 | 10 | 더 빠른 파일 감지 |
+| `Buffer_Chunk_Size` | 32KB | 512KB | I/O 효율성 |
+| `Buffer_Max_Size` | 32KB | 2MB | 대용량 로그 처리 |
+
+### Data Prepper
+
+| 설정 | 기본값 | 권장값 | 설명 |
+|------|--------|--------|------|
+| `workers` | 1 | CPU 코어 수 | 병렬 처리 |
+| `batch_size` | 200 | 1000-5000 | 배치 효율성 |
+| `buffer_size` | 12800 | 25600+ | 내부 버퍼 |
+| `request_timeout` | 60s | 120s | 대용량 배치용 |
+
+### OpenSearch
+
+| 설정 | 기본값 | 권장값 | 설명 |
+|------|--------|--------|------|
+| `index.refresh_interval` | 1s | 30s | 인덱싱 처리량 ↑ |
+| `index.translog.durability` | request | async | 쓰기 성능 ↑ |
+| `indices.memory.index_buffer_size` | 10% | 20% | 더 많은 인덱싱 버퍼 |
+| `thread_pool.write.queue_size` | 200 | 1000 | 대기열 크기 증가 |
+
+---
+
+## 결론
+
+Kubernetes 로그 파이프라인은 단순히 컴포넌트를 연결하는 것이 아닙니다. 각 계층이 **왜 그 위치에 있어야 하는지**, **어떤 트레이드오프가 있는지** 이해해야 안정적이고 효율적인 시스템을 구축할 수 있습니다.
+
+**핵심 설계 원칙:**
+
+1. **관심사의 분리**: 수집(Fluent Bit), 버퍼링(Kafka), 처리(Data Prepper), 저장(OpenSearch)
+2. **백프레셔 관리**: Kafka를 통한 생산자-소비자 디커플링
+3. **점진적 복잡성**: 엣지에서는 단순하게, 중앙에서 복잡한 처리
+4. **복원력 우선**: 각 계층의 장애가 전체 시스템을 마비시키지 않도록
+
+이 아키텍처는 일일 수십억 개의 로그를 처리하는 대규모 환경에서 검증된 패턴입니다. 여러분의 환경에 맞게 각 컴포넌트의 설정을 조정하되, 위에서 설명한 근본적인 설계 원칙은 유지하시기 바랍니다.
+
+---
+
+## 참고 자료
+
+- [Fluent Bit Documentation](https://docs.fluentbit.io/)
+- [OpenSearch Data Prepper](https://opensearch.org/docs/latest/data-prepper/)
+- [OpenSearch Index Management](https://opensearch.org/docs/latest/im-plugin/)
+- [Kafka Best Practices for Log Aggregation](https://kafka.apache.org/documentation/)

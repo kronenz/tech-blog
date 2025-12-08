@@ -7,11 +7,14 @@ import { ParseError } from '../errors';
 
 /**
  * Fixes YAML indentation that may be stripped by MDX/JSX template literals.
- * Uses AnimFlow DSL schema knowledge to reconstruct proper indentation.
  *
- * Key insight: MDX strips leading whitespace from template literals.
- * The YAML still has newlines, just no indentation. We need to reconstruct
- * the hierarchy based on DSL structure knowledge.
+ * MDX/Astro template literals strip ALL leading whitespace from each line,
+ * then preserve relative indentation within nested structures. This means:
+ * - `metadata:\n  title: "Test"` becomes `metadata:\ntitle: "Test"`
+ * - `nodes:\n  - id: foo\n    type: box` becomes `nodes:\n- id: foo\n  type: box`
+ *
+ * Strategy: Track current context (root key) and add indentation to lines
+ * that should be children of block keys but lost their leading indent.
  */
 function fixYamlIndentation(content: string): string {
   const lines = content.split('\n');
@@ -28,19 +31,17 @@ function fixYamlIndentation(content: string): string {
     'logging',
   ]);
 
-  // Keys that are children of root block keys (indent = 2)
-  const metadataKeys = new Set(['title', 'description', 'author']);
-  const canvasKeys = new Set(['width', 'height', 'sections', 'background']);
-  const loggingKeys = new Set(['enabled', 'maxEntries', 'position']);
+  // Keys that are direct children of specific root block keys
+  const childKeyMap: Record<string, Set<string>> = {
+    metadata: new Set(['title', 'description', 'author', 'tags']),
+    canvas: new Set(['width', 'height', 'sections', 'background']),
+    logging: new Set(['enabled', 'maxEntries', 'position', 'timestampFormat', 'styles']),
+  };
 
-  // Use a stack to track indent levels
-  // Stack entry: { indent: number, isArray: boolean, parentKey: string }
-  const stack: Array<{ indent: number; isArray: boolean; parentKey: string }> = [
-    { indent: 0, isArray: false, parentKey: '' }
-  ];
-
-  let prevWasArrayItemWithValue = false;
-  let prevArrayItemIndent = 0;
+  // Track current root-level block (ends with ':')
+  let currentRootBlock: string | null = null;
+  // Accumulate indent offset for nested content
+  let indentOffset = 0;
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -50,81 +51,40 @@ function fixYamlIndentation(content: string): string {
       continue;
     }
 
-    const isArrayItem = trimmed.startsWith('- ');
-    const endsWithColon = trimmed.endsWith(':');
+    // Get the original indentation of this line
+    const originalIndent = line.length - line.trimStart().length;
 
-    // Extract key name
+    // Extract key name (without considering array items)
     let keyName = '';
     const colonIdx = trimmed.indexOf(':');
-    if (colonIdx > 0) {
-      if (isArrayItem) {
-        keyName = trimmed.slice(2, colonIdx).trim();
-      } else {
-        keyName = trimmed.slice(0, colonIdx).trim();
-      }
+    if (colonIdx > 0 && !trimmed.startsWith('- ')) {
+      keyName = trimmed.slice(0, colonIdx).trim();
     }
 
-    let indent = stack[stack.length - 1].indent;
-    const parentKey = stack[stack.length - 1].parentKey;
-
-    // Determine indent based on context
-    if (!isArrayItem && rootKeys.has(keyName)) {
-      // Root-level key - always indent 0
-      indent = 0;
-      // Reset stack to root
-      stack.length = 1;
-      stack[0] = { indent: 0, isArray: false, parentKey: keyName };
-      prevWasArrayItemWithValue = false;
-
-      // If this root key ends with :, push a new context for its children
-      if (endsWithColon) {
-        stack.push({ indent: 2, isArray: false, parentKey: keyName });
-      }
-    } else if (metadataKeys.has(keyName) && parentKey === 'metadata') {
-      // Child of metadata block
-      indent = 2;
-      prevWasArrayItemWithValue = false;
-    } else if (canvasKeys.has(keyName) && parentKey === 'canvas') {
-      // Child of canvas block
-      indent = 2;
-      prevWasArrayItemWithValue = false;
-      if (keyName === 'sections' && endsWithColon) {
-        stack.push({ indent: 4, isArray: true, parentKey: 'sections' });
-      }
-    } else if (loggingKeys.has(keyName) && parentKey === 'logging') {
-      // Child of logging block
-      indent = 2;
-      prevWasArrayItemWithValue = false;
-    } else if (isArrayItem) {
-      // Array item
-      indent = stack[stack.length - 1].indent;
-      prevArrayItemIndent = indent;
-
-      // Check if this opens a block (ends with :) or has inline properties
-      if (endsWithColon) {
-        // Array item that opens a block: "- action:"
-        prevWasArrayItemWithValue = false;
-        stack.push({ indent: indent + 4, isArray: false, parentKey: keyName });
-      } else if (colonIdx > 0) {
-        // Array item with inline value: "- id: foo"
-        prevWasArrayItemWithValue = true;
-      } else {
-        prevWasArrayItemWithValue = false;
-      }
-    } else if (prevWasArrayItemWithValue) {
-      // Property after array item with value, e.g., "type:" after "- id: foo"
-      indent = prevArrayItemIndent + 2;
-      prevWasArrayItemWithValue = !endsWithColon; // Continue if not opening block
-
-      if (endsWithColon) {
-        stack.push({ indent: indent + 2, isArray: false, parentKey: keyName });
-      }
-    } else if (endsWithColon) {
-      // Block key - children will be indented
-      stack.push({ indent: indent + 2, isArray: false, parentKey: keyName });
+    // Check if this is a root-level key (at original indent 0)
+    if (rootKeys.has(keyName) && originalIndent === 0) {
+      // This is a root key - it should stay at indent 0
+      currentRootBlock = trimmed.endsWith(':') ? keyName : null;
+      indentOffset = currentRootBlock ? 2 : 0;
+      result.push(trimmed);
+      continue;
     }
 
-    result.push(' '.repeat(indent) + trimmed);
+    // If we're inside a root block and line is at indent 0
+    if (currentRootBlock && originalIndent === 0) {
+      // Add indentation for this line
+      result.push('  ' + trimmed);
+      continue;
+    }
+
+    // For lines with existing indentation, add the offset if we're in a block
+    if (currentRootBlock && originalIndent > 0 && indentOffset > 0) {
+      result.push(' '.repeat(indentOffset) + line);
+      continue;
+    }
+
+    // Default: preserve the line as-is
+    result.push(line);
   }
 
   return result.join('\n');
@@ -137,29 +97,27 @@ function fixYamlIndentation(content: string): string {
  * @throws ParseError if YAML is invalid
  */
 export function parseYaml(content: string): unknown {
-  // First try to parse as-is
-  try {
-    return yaml.load(content);
-  } catch (firstError) {
-    // If parsing fails, try fixing indentation (for MDX-stripped YAML)
-    try {
-      const fixed = fixYamlIndentation(content);
-      return yaml.load(fixed);
-    } catch {
-      // If still fails, throw the original error for better debugging
-    }
+  // Always apply indentation fix first for MDX-stripped YAML
+  // MDX template literals strip leading whitespace, causing YAML like:
+  //   metadata:\n  title: "Test" -> metadata:\ntitle: "Test"
+  // js-yaml parses this without error but creates wrong structure:
+  //   { metadata: null, title: "Test" } instead of { metadata: { title: "Test" } }
+  const fixed = fixYamlIndentation(content);
 
-    // Throw original error with proper formatting
-    if (firstError instanceof yaml.YAMLException) {
-      const mark = firstError.mark;
-      throw new ParseError(firstError.reason || 'Invalid YAML syntax', {
+  try {
+    return yaml.load(fixed);
+  } catch (error) {
+    // Throw error with proper formatting
+    if (error instanceof yaml.YAMLException) {
+      const mark = error.mark;
+      throw new ParseError(error.reason || 'Invalid YAML syntax', {
         line: mark?.line !== undefined ? mark.line + 1 : undefined,
         column: mark?.column !== undefined ? mark.column + 1 : undefined,
         source: content,
       });
     }
     throw new ParseError(
-      firstError instanceof Error ? firstError.message : 'Unknown parsing error'
+      error instanceof Error ? error.message : 'Unknown parsing error'
     );
   }
 }
