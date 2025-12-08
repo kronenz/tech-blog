@@ -7,95 +7,124 @@ import { ParseError } from '../errors';
 
 /**
  * Fixes YAML indentation that may be stripped by MDX/JSX template literals.
- * This restores proper indentation based on YAML structure patterns.
+ * Uses AnimFlow DSL schema knowledge to reconstruct proper indentation.
+ *
+ * Key insight: MDX strips leading whitespace from template literals.
+ * The YAML still has newlines, just no indentation. We need to reconstruct
+ * the hierarchy based on DSL structure knowledge.
  */
 function fixYamlIndentation(content: string): string {
   const lines = content.split('\n');
   const result: string[] = [];
 
-  // Root level keys in AnimFlow DSL
-  const rootKeys = [
-    'version:',
-    'metadata:',
-    'canvas:',
-    'nodes:',
-    'edges:',
-    'scenarios:',
-    'logging:',
+  // AnimFlow DSL root-level keys (must be at indent 0)
+  const rootKeys = new Set([
+    'version',
+    'metadata',
+    'canvas',
+    'nodes',
+    'edges',
+    'scenarios',
+    'logging',
+  ]);
+
+  // Keys that are children of root block keys (indent = 2)
+  const metadataKeys = new Set(['title', 'description', 'author']);
+  const canvasKeys = new Set(['width', 'height', 'sections', 'background']);
+  const loggingKeys = new Set(['enabled', 'maxEntries', 'position']);
+
+  // Use a stack to track indent levels
+  // Stack entry: { indent: number, isArray: boolean, parentKey: string }
+  const stack: Array<{ indent: number; isArray: boolean; parentKey: string }> = [
+    { indent: 0, isArray: false, parentKey: '' }
   ];
 
-  // Keys that start nested blocks (their children need indentation)
-  const blockKeys = [
-    'metadata:',
-    'canvas:',
-    'style:',
-    'log:',
-    'bounds:',
-    'sections:',
-    'logging:',
-    'position:',
-  ];
+  let prevWasArrayItemWithValue = false;
+  let prevArrayItemIndent = 0;
 
-  // Container keys that have array children
-  const arrayContainers = ['nodes:', 'edges:', 'scenarios:', 'steps:', 'sections:'];
-
-  let indentLevel = 0;
-  let inArrayItem = false;
-  let arrayItemIndent = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
+  for (const line of lines) {
+    const trimmed = line.trim();
 
     if (!trimmed) {
       result.push('');
       continue;
     }
 
-    // Check previous non-empty line
-    let prevTrimmed = '';
-    for (let j = result.length - 1; j >= 0; j--) {
-      const pt = result[j].trim();
-      if (pt) {
-        prevTrimmed = pt;
-        break;
+    const isArrayItem = trimmed.startsWith('- ');
+    const endsWithColon = trimmed.endsWith(':');
+
+    // Extract key name
+    let keyName = '';
+    const colonIdx = trimmed.indexOf(':');
+    if (colonIdx > 0) {
+      if (isArrayItem) {
+        keyName = trimmed.slice(2, colonIdx).trim();
+      } else {
+        keyName = trimmed.slice(0, colonIdx).trim();
       }
     }
 
-    // Reset to root level for root keys
-    if (rootKeys.some((k) => trimmed.startsWith(k) && !trimmed.startsWith('- '))) {
-      indentLevel = 0;
-      inArrayItem = false;
-    }
-    // Handle array items
-    else if (trimmed.startsWith('- ')) {
-      // Array items under containers
-      if (arrayContainers.some((k) => prevTrimmed === k)) {
-        indentLevel = 2;
+    let indent = stack[stack.length - 1].indent;
+    const parentKey = stack[stack.length - 1].parentKey;
+
+    // Determine indent based on context
+    if (!isArrayItem && rootKeys.has(keyName)) {
+      // Root-level key - always indent 0
+      indent = 0;
+      // Reset stack to root
+      stack.length = 1;
+      stack[0] = { indent: 0, isArray: false, parentKey: keyName };
+      prevWasArrayItemWithValue = false;
+
+      // If this root key ends with :, push a new context for its children
+      if (endsWithColon) {
+        stack.push({ indent: 2, isArray: false, parentKey: keyName });
       }
-      inArrayItem = true;
-      arrayItemIndent = indentLevel;
-    }
-    // Properties after array item marker on same line
-    else if (inArrayItem && prevTrimmed.startsWith('- ')) {
-      indentLevel = arrayItemIndent + 4; // Properties of array items get +4
-    }
-    // Block keys increase indent for next line
-    else if (blockKeys.some((k) => prevTrimmed === k || prevTrimmed.endsWith(': ' + k.slice(0, -1)))) {
-      indentLevel += 2;
-    }
-    // Array containers
-    else if (arrayContainers.some((k) => prevTrimmed === k)) {
-      indentLevel = 2;
+    } else if (metadataKeys.has(keyName) && parentKey === 'metadata') {
+      // Child of metadata block
+      indent = 2;
+      prevWasArrayItemWithValue = false;
+    } else if (canvasKeys.has(keyName) && parentKey === 'canvas') {
+      // Child of canvas block
+      indent = 2;
+      prevWasArrayItemWithValue = false;
+      if (keyName === 'sections' && endsWithColon) {
+        stack.push({ indent: 4, isArray: true, parentKey: 'sections' });
+      }
+    } else if (loggingKeys.has(keyName) && parentKey === 'logging') {
+      // Child of logging block
+      indent = 2;
+      prevWasArrayItemWithValue = false;
+    } else if (isArrayItem) {
+      // Array item
+      indent = stack[stack.length - 1].indent;
+      prevArrayItemIndent = indent;
+
+      // Check if this opens a block (ends with :) or has inline properties
+      if (endsWithColon) {
+        // Array item that opens a block: "- action:"
+        prevWasArrayItemWithValue = false;
+        stack.push({ indent: indent + 4, isArray: false, parentKey: keyName });
+      } else if (colonIdx > 0) {
+        // Array item with inline value: "- id: foo"
+        prevWasArrayItemWithValue = true;
+      } else {
+        prevWasArrayItemWithValue = false;
+      }
+    } else if (prevWasArrayItemWithValue) {
+      // Property after array item with value, e.g., "type:" after "- id: foo"
+      indent = prevArrayItemIndent + 2;
+      prevWasArrayItemWithValue = !endsWithColon; // Continue if not opening block
+
+      if (endsWithColon) {
+        stack.push({ indent: indent + 2, isArray: false, parentKey: keyName });
+      }
+    } else if (endsWithColon) {
+      // Block key - children will be indented
+      stack.push({ indent: indent + 2, isArray: false, parentKey: keyName });
     }
 
-    result.push(' '.repeat(indentLevel) + trimmed);
-
-    // Prepare for next iteration
-    if (blockKeys.some((k) => trimmed === k)) {
-      // Next line will need more indent
-    } else if (arrayContainers.some((k) => trimmed === k)) {
-      indentLevel = 2;
-    }
+    result.push(' '.repeat(indent) + trimmed);
   }
 
   return result.join('\n');
